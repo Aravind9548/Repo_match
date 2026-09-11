@@ -58,6 +58,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <footer className="border-t border-line py-8 text-center">
           <p className="font-hand text-xl">made with care (and a lot of READMEs) by Aravind</p>
           <p className="mt-1 text-xs text-muted">Spring Boot · FastAPI · Gemini · PostgreSQL · Next.js</p>
+          <p className="mt-1 text-xs text-muted">
+            Hero photo by{" "}
+            <a
+              href="https://www.pexels.com/photo/nighttime-cityscape-of-charlotte-freeway-29014306/"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-ink"
+            >
+              Danny George on Pexels
+            </a>
+          </p>
         </footer>
       </body>
     </html>

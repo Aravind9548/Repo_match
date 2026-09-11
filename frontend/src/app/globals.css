@@ -1,51 +1,49 @@
 @import "tailwindcss";
 
 /*
- * Navy + electric blue. Electric cyan ("accent") marks things YOU decide,
- * electric indigo ("blue") marks things the machine does.
+ * Natural navy + sky blue, taken from the hero photo's blue hour.
+ * Cyan ("accent") marks things YOU decide, steel blue ("blue") marks things the machine does.
  */
 :root {
-  --paper: #f2f5fc;
+  --paper: #f5f6f8;
   --card: #ffffff;
-  --sunken: #e7ecf8;
-  --ink: #0b1540;
-  --muted: #52608f;
-  --line: #d3dbf0;
-  --accent: #0077c8;
-  --accent-soft: #dcf1ff;
+  --sunken: #eceff4;
+  --ink: #0f1c33;
+  --muted: #55627a;
+  --line: #d9dee7;
+  --accent: #0b7fae;
+  --accent-soft: #e0f1f8;
   --on-accent: #ffffff;
-  --blue: #4f46e5;
-  --blue-soft: #e6e7ff;
-  --moss: #0f9d63;
-  --moss-soft: #dcf5e9;
-  --amber: #b36700;
-  --amber-soft: #fff0d6;
-  --dot: #cfd8ee;
-  --grain-opacity: 0.35;
-  --orb-opacity: 0.28;
+  --blue: #3b5bb5;
+  --blue-soft: #e5eaf7;
+  --moss: #1f8a5b;
+  --moss-soft: #e0f2e8;
+  --amber: #a86a12;
+  --amber-soft: #fbf0db;
+  --dot: #d6dbe4;
+  --grain-opacity: 0.3;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #060a22;
-    --card: #0c1338;
-    --sunken: #0a1030;
-    --ink: #edf2ff;
-    --muted: #93a0cf;
-    --line: #1c2660;
-    --accent: #1fe0ff;
-    --accent-soft: #06324a;
-    --on-accent: #031029;
-    --blue: #7480ff;
-    --blue-soft: #1a1d57;
-    --moss: #35e0a0;
-    --moss-soft: #0b2e25;
-    --amber: #ffc05a;
-    --amber-soft: #3a2c10;
-    --dot: #18214f;
-    --grain-opacity: 0.16;
-    --orb-opacity: 0.3;
+    --paper: #0a1428;
+    --card: #111d36;
+    --sunken: #0d182e;
+    --ink: #eef2f8;
+    --muted: #9aa8c2;
+    --line: #22304d;
+    --accent: #3fc6e6;
+    --accent-soft: #0f3346;
+    --on-accent: #04121f;
+    --blue: #7e9be0;
+    --blue-soft: #1a2849;
+    --moss: #52c592;
+    --moss-soft: #0f2c22;
+    --amber: #e8b04a;
+    --amber-soft: #33270f;
+    --dot: #1b2742;
+    --grain-opacity: 0.14;
     color-scheme: dark;
   }
 }
@@ -72,19 +70,19 @@
   --font-hand: var(--font-caveat), "Segoe Print", "Comic Sans MS", cursive;
 }
 
-/* Electric glows instead of flat drop shadows. */
+/* Soft, natural shadows with a hint of the step's color. */
 @utility shadow-glow {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--blue) 45%, transparent),
-    0 14px 34px -12px color-mix(in oklab, var(--blue) 70%, transparent);
+    0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent),
+    0 10px 28px -14px color-mix(in oklab, var(--blue) 55%, transparent);
 }
 @utility shadow-glow-accent {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent),
-    0 14px 34px -10px color-mix(in oklab, var(--accent) 65%, transparent);
+    0 1px 2px color-mix(in oklab, var(--ink) 12%, transparent),
+    0 10px 28px -14px color-mix(in oklab, var(--accent) 60%, transparent);
 }
 @utility text-glow {
-  text-shadow: 0 0 28px color-mix(in oklab, var(--accent) 45%, transparent);
+  text-shadow: 0 1px 0 color-mix(in oklab, var(--ink) 8%, transparent);
 }
 
 body {
@@ -92,26 +90,9 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   overflow-x: clip;
-  /* Faint dot grid, like a workflow canvas. */
-  background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
-  background-size: 22px 22px;
 }
 
-/* Two soft electric orbs far behind everything. */
-body::after {
-  content: "";
-  position: fixed;
-  inset: -20%;
-  z-index: -3;
-  pointer-events: none;
-  opacity: var(--orb-opacity);
-  filter: blur(40px);
-  background:
-    radial-gradient(38% 34% at 12% 22%, var(--accent), transparent 70%),
-    radial-gradient(36% 32% at 88% 78%, var(--blue), transparent 70%);
-}
-
-/* Subtle grain over the background (never intercepts clicks). */
+/* Subtle paper grain (never intercepts clicks). */
 body::before {
   content: "";
   position: fixed;
@@ -119,7 +100,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.35 0 0 0 0 0.5 0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.33 0 0 0 0 0.4 0 0 0 0.08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
 ::selection {
@@ -144,16 +125,6 @@ body::before {
 @keyframes march {
   to {
     stroke-dashoffset: -24;
-  }
-}
-@keyframes trail {
-  to {
-    stroke-dashoffset: -500;
-  }
-}
-@keyframes blink {
-  50% {
-    opacity: 0.15;
   }
 }
 @keyframes spin-y {
@@ -206,13 +177,6 @@ body::before {
   stroke-dasharray: 6 6;
   animation: march 0.8s linear infinite;
 }
-.trail {
-  stroke-dasharray: 160 90;
-  animation: trail 7s linear infinite;
-}
-.blink {
-  animation: blink 2.4s steps(2) infinite;
-}
 .spin-y {
   animation: spin-y 16s linear infinite;
 }
@@ -231,8 +195,6 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .connector-running,
-  .trail,
-  .blink,
   .spin-y,
   .tumble,
   .bob,

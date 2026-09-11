@@ -1,8 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
-import { CityNight } from "@/components/CityNight";
-import { CurlyArrow, Squiggle } from "@/components/Doodles";
+import heroCity from "@/assets/hero-city.jpg";
+import { CurlyArrow } from "@/components/Doodles";
 import { ArrowRightIcon, HandIcon, SparkleIcon } from "@/components/icons";
-import { HeroScene } from "@/components/Shapes3D";
 import { statusesFor, WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
 
 const GATES = [
@@ -26,41 +26,43 @@ const GATES = [
 export default function Home() {
   return (
     <div className="space-y-20 sm:space-y-28">
-      {/* Hero over a full-bleed night city; always dark, whatever the theme. */}
-      <section className="relative isolate -mt-10 pb-24 pt-14 sm:-mt-14 sm:pb-32 sm:pt-20">
+      {/* Hero over a full-bleed photo, tinted navy; always dark, whatever the theme. */}
+      <section className="relative isolate -mt-10 flex min-h-[540px] items-center pb-24 pt-16 sm:-mt-14 sm:min-h-[620px]">
         <div aria-hidden className="absolute inset-y-0 left-1/2 -z-10 w-screen -translate-x-1/2 overflow-hidden">
-          <CityNight className="absolute inset-0 size-full" />
-          <div className="absolute inset-0 bg-linear-to-r from-[#030720]/95 via-[#030720]/65 to-[#030720]/10" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-paper to-transparent" />
+          <Image
+            src={heroCity}
+            alt=""
+            fill
+            priority
+            placeholder="blur"
+            sizes="100vw"
+            className="object-cover object-[center_62%]"
+          />
+          {/* Light blue tint keeps the photo vivid; the dark fade only sits behind the text. */}
+          <div className="absolute inset-0 bg-[#1b3d9e]/20 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-linear-to-r from-[#061433]/85 via-[#061433]/35 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-linear-to-t from-paper to-transparent" />
         </div>
 
-        <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
-          <div>
-            <p className="font-hand text-2xl text-[#1fe0ff]">for when every job wants something different</p>
-            <h1 className="mt-3 font-display text-5xl font-semibold leading-[1.04] tracking-tight text-balance text-white [text-shadow:0_2px_30px_rgba(31,224,255,0.25)] sm:text-6xl">
-              Put the{" "}
-              <span className="relative inline-block text-[#1fe0ff]">
-                right
-                <Squiggle className="absolute -bottom-2 left-0 h-3 w-full text-[#7480ff]" />
-              </span>{" "}
-              projects on your resume.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#c3cdf2] text-pretty">
-              Paste a job description and your GitHub username. RepoMatch reads every repo, ranks them for that role,
-              and tells you why each one fits — backed by what&apos;s actually in your code.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-5">
-              <Link
-                href="/analyze"
-                className="inline-flex items-center gap-2 rounded-full bg-[#1fe0ff] px-6 py-3 font-semibold text-[#031029] shadow-[0_0_0_1px_rgba(31,224,255,0.5),0_12px_40px_-8px_rgba(31,224,255,0.7)] transition hover:-translate-y-0.5 hover:bg-white"
-              >
-                Match my GitHub to a job
-                <ArrowRightIcon className="size-4" />
-              </Link>
-              <span className="font-hand text-xl text-[#9fb0e8]">takes about a minute</span>
-            </div>
+        <div className="max-w-2xl">
+          <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight text-balance text-white sm:text-6xl">
+            Put the right projects on your resume.
+          </h1>
+          <p className="mt-5 text-2xl font-semibold text-[#5fd6f2] sm:text-[1.7rem]">Your repos, matched to the job.</p>
+          <p className="mt-5 max-w-xl text-lg leading-relaxed text-[#d7e0f0] text-pretty">
+            Paste a job description and your GitHub username. RepoMatch reads every repo, ranks them for that role,
+            and tells you why each one fits — backed by what&apos;s actually in your code.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center gap-5">
+            <Link
+              href="/analyze"
+              className="inline-flex items-center gap-2 rounded-full bg-[#3fc6e6] px-6 py-3 font-semibold text-[#04121f] shadow-lg shadow-black/25 transition hover:-translate-y-0.5 hover:bg-[#7dddf3]"
+            >
+              Match my GitHub to a job
+              <ArrowRightIcon className="size-4" />
+            </Link>
+            <span className="text-sm text-[#b9c6dc]">Takes about a minute. Free until you ask Gemini.</span>
           </div>
-          <HeroScene />
         </div>
       </section>
 
@@ -70,7 +72,7 @@ export default function Home() {
             How it works
           </h2>
           <CurlyArrow className="mb-[-10px] hidden h-10 w-14 text-muted sm:block" />
-          <span className="font-hand text-xl text-muted">it waits for you at every cyan step</span>
+          <span className="font-hand text-xl text-muted">it waits for you at every round step</span>
         </div>
         <WorkflowCanvas statuses={statusesFor("REVIEW_SHORTLIST", null)} caption="An example run, paused at the shortlist." />
       </section>
