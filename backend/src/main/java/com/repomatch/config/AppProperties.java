@@ -6,7 +6,11 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "repomatch")
-public record AppProperties(GitHub github, Ai ai, Analysis analysis, Cors cors) {
+public record AppProperties(GitHub github, Ai ai, Analysis analysis, Limits limits, Cors cors) {
+
+    /** Guards on paid LLM calls (see UsageGuard). */
+    public record Limits(int llmCallsPerClientPerHour, int llmCallsPerDay) {
+    }
 
     public record GitHub(String baseUrl, String token, Duration cacheTtl, int maxReadmeChars, int maxParallelRequests) {
         public boolean hasToken() {

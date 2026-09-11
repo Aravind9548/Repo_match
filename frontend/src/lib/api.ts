@@ -51,12 +51,67 @@ export type Analysis = {
   createdAt: string;
 };
 
+export type AnalysisSummary = {
+  id: string;
+  jobDescriptionPreview: string;
+  topRepos: string[];
+  createdAt: string;
+};
+
 export type AnalyzeRequest = {
   username: string;
   jobDescription: string;
   topK?: number;
   includeForks?: boolean;
   refresh?: boolean;
+};
+
+// --- Human-in-the-loop workflow -------------------------------------------
+
+export type WorkflowStep = "REVIEW_REPOS" | "REVIEW_SHORTLIST" | "REVIEW_RESULTS" | "DONE";
+
+export type RepoOption = {
+  id: number;
+  name: string;
+  fullName: string;
+  url: string;
+  description: string | null;
+  languages: string[];
+  stars: number;
+  fork: boolean;
+  hasReadme: boolean;
+  pushedAt: string | null;
+  selected: boolean;
+};
+
+export type RankedOption = {
+  id: number;
+  name: string;
+  url: string;
+  similarity: number;
+  hasReadme: boolean;
+  shortlisted: boolean;
+};
+
+export type TokenUsage = { promptTokens: number; outputTokens: number; thinkingTokens: number };
+
+export type Workflow = {
+  id: string;
+  account: AccountSummary | null;
+  jobDescription: string;
+  topK: number;
+  step: WorkflowStep;
+  repos: RepoOption[];
+  ranking: RankedOption[];
+  judgements: MatchResult[];
+  acceptedIds: number[];
+  embeddingModel: string | null;
+  llmModel: string | null;
+  usage: TokenUsage | null;
+  warnings: string[];
+  analysisId: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 /** RFC 7807 problem document returned by the backend on errors. */
@@ -110,26 +165,38 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function getAnalysis(id: string) {
-  return request<Analysis>(`/api/analyses/${encodeURIComponent(id)}`);
-}
+const post = <T>(path: string, body: unknown) => request<T>(path, { method: "POST", body: JSON.stringify(body) });
 
-export function analyze(body: AnalyzeRequest) {
-  return request<Analysis>("/api/analyze", { method: "POST", body: JSON.stringify(body) });
-}
+export const getAnalysis = (id: string) => request<Analysis>(`/api/analyses/${encodeURIComponent(id)}`);
+export const getHistory = (username: string) =>
+  request<AnalysisSummary[]>(`/api/analyses?username=${encodeURIComponent(username)}`);
+
+export const createWorkflow = (body: AnalyzeRequest) => post<Workflow>("/api/workflows", body);
+export const getWorkflow = (id: string) => request<Workflow>(`/api/workflows/${encodeURIComponent(id)}`);
+export const approveRepos = (id: string, repoIds: number[]) => post<Workflow>(`/api/workflows/${id}/repos`, { repoIds });
+export const approveShortlist = (id: string, repoIds: number[]) =>
+  post<Workflow>(`/api/workflows/${id}/shortlist`, { repoIds });
+export const finalizeWorkflow = (id: string, repoIds: number[]) =>
+  post<Workflow>(`/api/workflows/${id}/finalize`, { repoIds });
+
+/** GitHub's generated social-preview card for a repo ("owner/name"). */
+export const repoImageUrl = (fullName: string) => `https://opengraph.githubassets.com/1/${fullName}`;
 
 /** A human sentence for each failure mode the backend can report. */
 export function describeError(err: unknown): string {
   if (!(err instanceof ApiError)) return "Something went wrong. Please try again.";
-  const { status, detail, resetAt } = err.problem;
+  const { status, title, detail, resetAt } = err.problem;
   switch (status) {
     case 0:
       return detail!;
     case 404:
       return detail ?? "That GitHub user doesn't exist.";
+    case 409:
+      return detail ?? "This step was already completed. Reload to see the latest state.";
     case 422:
       return detail ?? "This user has no public repositories to analyze.";
     case 429: {
+      if (title === "Usage limit reached") return detail ?? "Usage limit reached. Please try again later.";
       const when = resetAt ? ` Try again after ${new Date(resetAt).toLocaleTimeString()}.` : " Try again later.";
       return `GitHub's API rate limit was reached.${when}`;
     }

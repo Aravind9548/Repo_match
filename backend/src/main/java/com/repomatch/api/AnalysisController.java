@@ -16,6 +16,7 @@ import com.repomatch.analysis.AnalysisSummary;
 import com.repomatch.analysis.AnalyzeRequest;
 import com.repomatch.analysis.AnalyzeResponse;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -28,9 +29,10 @@ public class AnalysisController {
         this.analysis = analysis;
     }
 
+    /** One-shot analysis with no review gates (API clients); the UI uses /api/workflows. */
     @PostMapping("/analyze")
-    public AnalyzeResponse analyze(@Valid @RequestBody AnalyzeRequest request) {
-        return analysis.analyze(request);
+    public AnalyzeResponse analyze(@Valid @RequestBody AnalyzeRequest request, HttpServletRequest http) {
+        return analysis.analyze(request, http.getRemoteAddr());
     }
 
     @GetMapping("/analyses/{id}")

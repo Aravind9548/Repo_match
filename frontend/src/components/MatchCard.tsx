@@ -1,11 +1,25 @@
+import type { ReactNode } from "react";
 import type { MatchResult } from "@/lib/api";
 import { ScoreBar } from "./ScoreBar";
 
-export function MatchCard({ match }: { match: MatchResult }) {
+export function MatchCard({
+  match,
+  actions,
+  dimmed = false,
+}: {
+  match: MatchResult;
+  /** Extra controls in the card header (e.g. keep/skip during review). */
+  actions?: ReactNode;
+  dimmed?: boolean;
+}) {
   return (
-    <article className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+    <article
+      className={`rounded-2xl border border-line bg-card p-5 shadow-sm shadow-ink/5 transition sm:p-6 ${
+        dimmed ? "opacity-55" : ""
+      }`}
+    >
       <header className="flex items-start gap-4">
-        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-sm font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900">
+        <span className="shrink-0 font-display text-4xl font-semibold leading-none text-accent tabular-nums">
           {match.rank}
         </span>
         <div className="min-w-0 flex-1">
@@ -13,17 +27,18 @@ export function MatchCard({ match }: { match: MatchResult }) {
             href={match.url}
             target="_blank"
             rel="noreferrer"
-            className="break-words text-lg font-semibold hover:underline"
+            className="break-words font-display text-xl font-semibold hover:underline"
           >
             {match.name}
           </a>
-          {match.description && (
-            <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">{match.description}</p>
-          )}
+          {match.description && <p className="mt-0.5 text-sm text-muted">{match.description}</p>}
         </div>
-        <div className="shrink-0 text-right">
-          <div className="text-3xl font-bold leading-none tabular-nums">{match.matchScore}</div>
-          <div className="mt-1 text-xs uppercase tracking-wide text-zinc-500">match</div>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <div className="text-right">
+            <span className="font-display text-3xl font-semibold leading-none tabular-nums">{match.matchScore}</span>
+            <span className="ml-1 text-xs uppercase tracking-wide text-muted">match</span>
+          </div>
+          {actions}
         </div>
       </header>
 
@@ -36,10 +51,7 @@ export function MatchCard({ match }: { match: MatchResult }) {
       {match.matchedRequirements.length > 0 && (
         <ul className="mt-4 flex flex-wrap gap-2" aria-label="Job requirements this project evidences">
           {match.matchedRequirements.map((req) => (
-            <li
-              key={req}
-              className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-900"
-            >
+            <li key={req} className="rounded-full border border-moss/25 bg-moss-soft px-2.5 py-0.5 text-xs font-medium text-moss">
               {req}
             </li>
           ))}
@@ -47,28 +59,25 @@ export function MatchCard({ match }: { match: MatchResult }) {
       )}
 
       {match.evidence.length > 0 && (
-        <div className="mt-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500">From the repo</h3>
-          <ul className="mt-2 space-y-1.5">
+        <div className="mt-5 rounded-xl bg-sunken/70 px-4 py-3">
+          <h3 className="font-hand text-lg leading-none text-muted">straight from the repo</h3>
+          <ul className="mt-2 space-y-1">
             {match.evidence.map((quote) => (
-              <li
-                key={quote}
-                className="border-l-2 border-zinc-300 pl-3 font-mono text-sm text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
-              >
-                {quote}
+              <li key={quote} className="font-mono text-[13px] text-ink/85">
+                “{quote}”
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <footer className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-100 pt-4 text-xs text-zinc-500 dark:border-zinc-800">
+      <footer className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-4 text-xs text-muted">
         {match.languages.length > 0 && <span>{match.languages.slice(0, 4).join(" · ")}</span>}
         {match.fitScore !== null && <span>LLM fit {match.fitScore}/100</span>}
         <span>similarity {match.similarity.toFixed(2)}</span>
         {match.stars > 0 && <span>★ {match.stars}</span>}
         {!match.hasReadme && (
-          <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <span className="rounded-full bg-amber-soft px-2 py-0.5 font-medium text-amber">
             No README — add one to strengthen this match
           </span>
         )}

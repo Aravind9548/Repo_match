@@ -2,8 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // GitHub profile pictures shown on the results page.
-    remotePatterns: [{ protocol: "https", hostname: "avatars.githubusercontent.com" }],
+    remotePatterns: [
+      // GitHub profile pictures
+      { protocol: "https", hostname: "avatars.githubusercontent.com" },
+      // GitHub's generated social-preview cards for repositories
+      { protocol: "https", hostname: "opengraph.githubassets.com" },
+    ],
   },
 };
 

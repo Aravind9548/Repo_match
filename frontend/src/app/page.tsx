@@ -1,52 +1,90 @@
 import Link from "next/link";
+import { CurlyArrow, Squiggle } from "@/components/Doodles";
+import { HeroIllustration } from "@/components/HeroIllustration";
+import { ArrowRightIcon, HandIcon, SparkleIcon } from "@/components/icons";
+import { statusesFor, WorkflowCanvas } from "@/components/workflow/WorkflowCanvas";
 
-const STEPS = [
+const GATES = [
   {
-    title: "Read every repo",
-    body: "We pull your public GitHub repositories — READMEs, languages and topics — and build a profile of each project.",
+    title: "You pick the repos",
+    body: "Coursework, half-finished experiments, that one fork — untick anything you wouldn't put in front of a recruiter.",
   },
   {
-    title: "Rank against the job",
-    body: "Embeddings shortlist the projects closest to the job description, then Gemini judges each one against the actual requirements.",
+    title: "You shape the shortlist",
+    body: "See how every repo ranks against the job before any AI spends a cent. Add the underdog, drop the noise.",
   },
   {
-    title: "Explain with evidence",
-    body: "Every recommendation comes with a reason and quotes from your own repo. Nothing is invented — unverifiable claims are dropped.",
+    title: "You keep the final say",
+    body: "Gemini explains each pick with quotes from your own README. Keep the ones you'd happily talk about in an interview.",
   },
 ];
 
 export default function Home() {
   return (
-    <div>
-      <section className="mx-auto max-w-3xl py-6 text-center sm:py-12">
-        <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-          Which of your projects should go on this resume?
-        </h1>
-        <p className="mx-auto mt-5 max-w-2xl text-lg text-zinc-600 text-pretty dark:text-zinc-400">
-          Paste a job description and your GitHub username. RepoMatch ranks your repositories for that role and
-          tells you why each one fits.
-        </p>
-        <Link
-          href="/analyze"
-          className="mt-8 inline-block rounded-lg bg-zinc-900 px-6 py-3 font-medium text-white shadow-sm hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          Match my GitHub to a job
-        </Link>
+    <div className="space-y-20 sm:space-y-28">
+      <section className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
+        <div>
+          <p className="font-hand text-2xl text-accent">for when every job wants something different</p>
+          <h1 className="mt-3 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-6xl">
+            Put the{" "}
+            <span className="relative inline-block">
+              right
+              <Squiggle className="absolute -bottom-2 left-0 h-3 w-full text-accent" />
+            </span>{" "}
+            projects on your resume.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted text-pretty">
+            Paste a job description and your GitHub username. RepoMatch reads every repo, ranks them for that role,
+            and tells you why each one fits — backed by what&apos;s actually in your code.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            <Link
+              href="/analyze"
+              className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-paper shadow-md shadow-ink/10 transition hover:bg-accent"
+            >
+              Match my GitHub to a job
+              <ArrowRightIcon className="size-4" />
+            </Link>
+            <span className="font-hand text-xl text-muted">takes about a minute</span>
+          </div>
+        </div>
+        <HeroIllustration className="mx-auto w-full max-w-lg" />
       </section>
 
-      <section aria-labelledby="how" className="mt-12">
-        <h2 id="how" className="sr-only">
-          How it works
-        </h2>
+      <section aria-labelledby="how">
+        <div className="mb-6 flex items-end gap-3">
+          <h2 id="how" className="font-display text-3xl font-semibold">
+            How it works
+          </h2>
+          <CurlyArrow className="mb-[-10px] hidden h-10 w-14 text-muted sm:block" />
+          <span className="font-hand text-xl text-muted">you approve every round step</span>
+        </div>
+        <WorkflowCanvas statuses={statusesFor("REVIEW_SHORTLIST", null)} caption="An example run, paused at the shortlist." />
+      </section>
+
+      <section aria-labelledby="control" className="grid gap-6 lg:grid-cols-[1fr_2fr]">
+        <div>
+          <h2 id="control" className="font-display text-3xl font-semibold text-balance">
+            The AI does the reading. You make the calls.
+          </h2>
+          <p className="mt-3 text-muted">
+            Three checkpoints stop the pipeline and wait for you. The paid Gemini step only runs after you approve the
+            shortlist — and every reason it gives is checked against your repo before you see it.
+          </p>
+        </div>
         <ol className="grid gap-4 sm:grid-cols-3">
-          {STEPS.map((step, i) => (
+          {GATES.map((gate, i) => (
             <li
-              key={step.title}
-              className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+              key={gate.title}
+              className={`rounded-2xl border border-line bg-card p-5 shadow-sm shadow-ink/5 ${
+                i === 1 ? "sm:translate-y-4 sm:-rotate-1" : i === 2 ? "sm:rotate-1" : ""
+              }`}
             >
-              <span className="font-mono text-sm text-zinc-400">0{i + 1}</span>
-              <h3 className="mt-2 font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{step.body}</p>
+              <span className="flex size-10 items-center justify-center rounded-full border-2 border-accent bg-accent-soft text-accent">
+                {i === 2 ? <SparkleIcon className="size-5" /> : <HandIcon className="size-5" />}
+              </span>
+              <h3 className="mt-4 font-display text-lg font-semibold">{gate.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{gate.body}</p>
             </li>
           ))}
         </ol>

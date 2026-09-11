@@ -1,5 +1,7 @@
 server:
   port: ${PORT:8081}
+  # Trust X-Forwarded-For from the hosting proxy so rate limits see the real client IP.
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -48,6 +50,10 @@ repomatch:
     rerank-pool-min: 12
     # Short keyword JDs make near-empty repos look deceptively similar; they only fill leftover LLM slots.
     min-readme-chars: 100
+  limits:
+    # Each LLM call costs real money (~$0.08 with Gemini 3.1 Pro); cap it for public deployments.
+    llm-calls-per-client-per-hour: ${LLM_CALLS_PER_CLIENT_PER_HOUR:5}
+    llm-calls-per-day: ${LLM_CALLS_PER_DAY:50}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 

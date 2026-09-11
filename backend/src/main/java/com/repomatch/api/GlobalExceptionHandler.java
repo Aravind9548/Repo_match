@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -20,6 +21,10 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.repomatch.ai.AiServiceException;
 import com.repomatch.analysis.AnalysisNotFoundException;
 import com.repomatch.analysis.NoRepositoriesException;
+import com.repomatch.analysis.UsageLimitException;
+import com.repomatch.workflow.InvalidSelectionException;
+import com.repomatch.workflow.WorkflowNotFoundException;
+import com.repomatch.workflow.WorkflowStepException;
 import com.repomatch.github.GitHubApiException;
 import com.repomatch.github.GitHubRateLimitException;
 import com.repomatch.github.GitHubUserNotFoundException;
@@ -30,9 +35,35 @@ import jakarta.validation.ConstraintViolationException;
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler({GitHubUserNotFoundException.class, AnalysisNotFoundException.class})
+    @ExceptionHandler({GitHubUserNotFoundException.class, AnalysisNotFoundException.class, WorkflowNotFoundException.class})
     ProblemDetail notFound(RuntimeException e) {
         return problem(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
+    }
+
+    @ExceptionHandler(WorkflowStepException.class)
+    ProblemDetail wrongStep(WorkflowStepException e) {
+        return problem(HttpStatus.CONFLICT, "Step not available", e.getMessage());
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    ProblemDetail concurrentUpdate(ObjectOptimisticLockingFailureException e) {
+        return problem(HttpStatus.CONFLICT, "Step not available",
+                "This workflow was just updated elsewhere (another tab?). Reload to see its current state.");
+    }
+
+    @ExceptionHandler(InvalidSelectionException.class)
+    ProblemDetail invalidSelection(InvalidSelectionException e) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid selection", e.getMessage());
+    }
+
+    @ExceptionHandler(UsageLimitException.class)
+    ResponseEntity<ProblemDetail> usageLimit(UsageLimitException e) {
+        ProblemDetail pd = problem(HttpStatus.TOO_MANY_REQUESTS, "Usage limit reached", e.getMessage());
+        long seconds = Math.max(1, e.getRetryAfter().toSeconds());
+        pd.setProperty("retryAfterSeconds", seconds);
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
+                .body(pd);
     }
 
     @ExceptionHandler(NoRepositoriesException.class)

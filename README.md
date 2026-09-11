@@ -51,20 +51,37 @@ npm run dev
 
 Frontend env (optional, e.g. in `frontend/.env.local`): `NEXT_PUBLIC_API_BASE_URL` (browser → API, default `http://localhost:8081`) and `API_BASE_URL` (server components → API, defaults to the public URL). The backend's allowed CORS origins are set with `CORS_ALLOWED_ORIGINS`.
 
-Pages: `/` landing · `/analyze` (username + JD form) · `/results/{id}` (shareable, re-openable result).
+Pages: `/` landing · `/analyze` (start a run) · `/workflow/{id}` (review gates) · `/results/{id}` (shareable result) · `/history`.
 
 Or everything in containers: `docker compose -p repomatch up --build` (set `GCLOUD_ADC_FILE` in `.env` to a service-account key for Vertex).
+
+## Human in the loop
+
+The UI runs every analysis as a workflow that stops at three review gates, n8n-style:
+
+```
+[Fetch repos] → ✋ pick repos → [Rank · embeddings] → ✋ edit shortlist → [Gemini judge · paid] → ✋ keep/skip picks → [Save]
+```
+
+The paid LLM step can only run after the shortlist is approved, and it judges exactly the repos the human kept. Workflow state (decisions + intermediate results) lives in Postgres, with optimistic locking so two tabs can't approve the same gate twice.
 
 ## API
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/repos/{username}?refresh=false` | Sync + list a user's repos |
-| `POST` | `/api/analyze` | `{username, jobDescription, topK?, includeForks?, refresh?}` → ranked matches with reasons |
-| `GET` | `/api/analyses/{id}` | Re-open a past analysis |
+| `POST` | `/api/workflows` | `{username, jobDescription, topK?, includeForks?, refresh?}` → fetch repos, stop at gate 1 |
+| `GET` | `/api/workflows/{id}` | Current gate plus every step's data |
+| `POST` | `/api/workflows/{id}/repos` | `{repoIds}` approve gate 1 → rank, propose a shortlist |
+| `POST` | `/api/workflows/{id}/shortlist` | `{repoIds}` approve gate 2 → Gemini judges exactly these |
+| `POST` | `/api/workflows/{id}/finalize` | `{repoIds}` approve gate 3 → save accepted picks as an analysis |
+| `POST` | `/api/analyze` | One-shot analysis with no review gates (API clients) |
+| `GET` | `/api/analyses/{id}` | Re-open a saved analysis |
 | `GET` | `/api/analyses?username=` | Recent analyses for a user |
+| `GET` | `/api/repos/{username}?refresh=false` | Sync + list a user's repos |
 
-Errors are RFC 7807 problem documents: `404` unknown user, `422` no repos, `429` GitHub rate limit (with `Retry-After`), `503` AI service down.
+Errors are RFC 7807 problem documents: `400` invalid input/selection (with `fieldErrors`), `404` unknown user/analysis/workflow, `409` gate already passed or not reached, `422` no repos, `429` GitHub rate limit or RepoMatch usage limit (with `Retry-After`), `503` AI service down.
+
+**Usage limits** (paid LLM calls only): `LLM_CALLS_PER_CLIENT_PER_HOUR` (default 5) and `LLM_CALLS_PER_DAY` (default 50). In-memory, so they assume a single backend instance.
 
 ## Tests
 

@@ -33,16 +33,16 @@ class AnalysisScoringTest {
         byId.get(2L).setReadme("x".repeat(500));
         byId.get(3L).setReadme("x".repeat(500)); // lowest similarity, but has content
 
-        assertThat(AnalysisService.selectPool(all, byId, 2, 100))
+        assertThat(MatchPipeline.selectPool(all, byId, 2, 100))
                 .extracting(RankResponse.Ranked::id).containsExactly(2L, 3L);
         // Thin repos still fill leftover slots.
-        assertThat(AnalysisService.selectPool(all, byId, 5, 100))
+        assertThat(MatchPipeline.selectPool(all, byId, 5, 100))
                 .extracting(RankResponse.Ranked::id).containsExactly(2L, 3L, 1L);
     }
 
     @Test
     void withoutLlmScoresAreRelativeSimilarity() {
-        List<MatchResult> scored = AnalysisService.score(all, all, byId, Map.of());
+        List<MatchResult> scored = MatchPipeline.score(all, all, byId, Map.of());
 
         assertThat(scored).extracting(MatchResult::repoId).containsExactly(1L, 2L, 3L);
         assertThat(scored).extracting(MatchResult::matchScore).containsExactly(100, 75, 0);
@@ -55,7 +55,7 @@ class AnalysisScoringTest {
                 1L, new ExplainResponse.Explanation(1, 30, "weak", List.of(), List.of()),
                 2L, new ExplainResponse.Explanation(2, 95, "strong", List.of("Java"), List.of()));
 
-        List<MatchResult> scored = AnalysisService.score(all.subList(0, 2), all, byId, explanations);
+        List<MatchResult> scored = MatchPipeline.score(all.subList(0, 2), all, byId, explanations);
 
         // repo2: 0.2*75 + 0.8*95 = 91 beats repo1: 0.2*100 + 0.8*30 = 44
         assertThat(scored).extracting(MatchResult::repoId).containsExactly(2L, 1L);
