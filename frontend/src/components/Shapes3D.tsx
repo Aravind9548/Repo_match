@@ -118,7 +118,7 @@ export function HeroScene() {
             fill="none"
             strokeWidth="2.5"
             strokeLinecap="round"
-            className={`connector-running ${i === 2 ? "stroke-line" : "stroke-accent"}`}
+            className={`connector-running ${i === 2 ? "stroke-[#3a4a8c]" : "stroke-[#1fe0ff]"}`}
           />
         ))}
       </svg>
@@ -137,10 +137,10 @@ export function HeroScene() {
             rotate="rotateX(-20deg) rotateY(26deg)"
             front={
               <div className="flex size-full flex-col justify-center gap-1.5 px-3">
-                <span className="font-mono text-[13px] font-bold text-white">{b.label}</span>
+                <span className={`font-mono text-[13px] font-bold ${b.tone === "blue" ? "text-white" : "text-[#031029]"}`}>{b.label}</span>
                 <span className="flex gap-1">
-                  <span className="h-1 w-8 rounded-full bg-white/80" />
-                  <span className="h-1 w-5 rounded-full bg-white/45" />
+                  <span className={`h-1 w-8 rounded-full ${b.tone === "blue" ? "bg-white/80" : "bg-[#031029]/70"}`} />
+                  <span className={`h-1 w-5 rounded-full ${b.tone === "blue" ? "bg-white/45" : "bg-[#031029]/40"}`} />
                 </span>
               </div>
             }
@@ -148,7 +148,7 @@ export function HeroScene() {
         </div>
       ))}
 
-      <span className="absolute bottom-0 right-10 rotate-[-4deg] font-hand text-2xl text-accent">
+      <span className="absolute bottom-0 right-10 rotate-[-4deg] font-hand text-2xl text-[#1fe0ff]">
         only the good ones make it →
       </span>
     </div>

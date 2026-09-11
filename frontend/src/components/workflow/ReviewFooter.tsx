@@ -12,11 +12,11 @@ export function ReviewFooter({ summary, children }: { summary: ReactNode; childr
 
 export function PrimaryButton({
   children,
-  tone = "ink",
+  tone = "accent",
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "ink" | "accent" }) {
-  const colors =
-    tone === "accent" ? "bg-accent text-white shadow-riso hover:shadow-riso-pink" : "bg-ink text-paper shadow-riso-pink hover:shadow-riso";
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "accent" | "blue" }) {
+  // Cyan = a human approval; indigo = hands work to the (paid) machine.
+  const colors = tone === "blue" ? "bg-blue text-white shadow-glow" : "bg-accent text-on-accent shadow-glow-accent";
   return (
     <button
       type="button"

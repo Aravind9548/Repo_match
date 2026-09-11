@@ -1,4 +1,4 @@
-import type { ComponentType, SVGProps } from "react";
+import type { ComponentType, ReactNode, SVGProps } from "react";
 import type { WorkflowStep } from "@/lib/api";
 import {
   BarsIcon,
@@ -19,23 +19,26 @@ type CanvasNode = {
   note: string;
   kind: "auto" | "review" | "future";
   icon: ComponentType<SVGProps<SVGSVGElement>>;
+  /** The review gate you land on when you click this node to go back. */
+  gate: WorkflowStep | null;
   paid?: boolean;
 };
 
-/** The pipeline, n8n-style: blue squares run on their own, pink circles wait for you. */
+/** The pipeline, n8n-style: indigo squares run on their own, cyan circles wait for you. */
 const PIPELINE: CanvasNode[] = [
-  { label: "Fetch repos", note: "from GitHub", kind: "auto", icon: GithubIcon },
-  { label: "Pick repos", note: "you decide", kind: "review", icon: HandIcon },
-  { label: "Rank", note: "embeddings", kind: "auto", icon: BarsIcon },
-  { label: "Shortlist", note: "you decide", kind: "review", icon: HandIcon },
-  { label: "Gemini judge", note: "reads READMEs", kind: "auto", icon: SparkleIcon, paid: true },
-  { label: "Accept picks", note: "you decide", kind: "review", icon: HandIcon },
-  { label: "Save", note: "shareable link", kind: "auto", icon: LinkIcon },
-  { label: "Resume bullets", note: "coming soon", kind: "future", icon: PenIcon },
-  { label: "Tailor LaTeX", note: "coming soon", kind: "future", icon: DocIcon },
+  { label: "Fetch repos", note: "from GitHub", kind: "auto", icon: GithubIcon, gate: "REVIEW_REPOS" },
+  { label: "Pick repos", note: "you decide", kind: "review", icon: HandIcon, gate: "REVIEW_REPOS" },
+  { label: "Rank", note: "embeddings", kind: "auto", icon: BarsIcon, gate: "REVIEW_SHORTLIST" },
+  { label: "Shortlist", note: "you decide", kind: "review", icon: HandIcon, gate: "REVIEW_SHORTLIST" },
+  { label: "Gemini judge", note: "reads READMEs", kind: "auto", icon: SparkleIcon, gate: "REVIEW_RESULTS", paid: true },
+  { label: "Accept picks", note: "you decide", kind: "review", icon: HandIcon, gate: "REVIEW_RESULTS" },
+  { label: "Save", note: "shareable link", kind: "auto", icon: LinkIcon, gate: null },
+  { label: "Resume bullets", note: "coming soon", kind: "future", icon: PenIcon, gate: null },
+  { label: "Tailor LaTeX", note: "coming soon", kind: "future", icon: DocIcon, gate: null },
 ];
 
 const STEP_COUNT = PIPELINE.filter((n) => n.kind !== "future").length;
+const STEP_ORDER: WorkflowStep[] = ["REVIEW_REPOS", "REVIEW_SHORTLIST", "REVIEW_RESULTS", "DONE"];
 
 const GATE_INDEX: Record<WorkflowStep, number> = {
   REVIEW_REPOS: 1,
@@ -64,11 +67,11 @@ function boxClass(node: CanvasNode, status: NodeStatus) {
   const shape = node.kind === "review" ? "rounded-full" : "rounded-2xl";
   switch (status) {
     case "done":
-      return `${shape} ${node.kind === "review" ? "border-accent bg-accent" : "border-blue bg-blue"} text-white`;
+      return `${shape} ${node.kind === "review" ? "border-accent bg-accent text-on-accent" : "border-blue bg-blue text-white"}`;
     case "current":
-      return `${shape} scale-110 border-accent bg-card text-accent shadow-riso-pink`;
+      return `${shape} scale-110 border-accent bg-card text-accent shadow-glow-accent`;
     case "running":
-      return `${shape} scale-110 border-blue bg-card text-blue shadow-riso`;
+      return `${shape} scale-110 border-blue bg-card text-blue shadow-glow`;
     case "pending":
       return `${shape} border-line bg-card text-muted`;
     case "future":
@@ -100,15 +103,40 @@ function Connector({ from, to }: { from: NodeStatus; to: NodeStatus }) {
   );
 }
 
+/** A node is a button when clicking it can take you back to its gate. */
+function NodeShell({ onClick, label, children }: { onClick?: () => void; label: string; children: ReactNode }) {
+  const base = "group flex w-[5.25rem] flex-col items-center rounded-xl text-center";
+  return onClick ? (
+    <button
+      type="button"
+      onClick={onClick}
+      title={`Go back to “${label}”`}
+      aria-label={`Go back to ${label}`}
+      className={`${base} cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent`}
+    >
+      {children}
+    </button>
+  ) : (
+    <div className={base}>{children}</div>
+  );
+}
+
 export function WorkflowCanvas({
   statuses,
   caption,
   sticky = false,
+  step = null,
+  onGoBack,
+  disabled = false,
 }: {
   statuses: NodeStatus[];
   caption?: string;
   /** Pin under the site header so the current step stays visible while reviewing. */
   sticky?: boolean;
+  /** Where the workflow currently is; finished nodes before it become clickable. */
+  step?: WorkflowStep | null;
+  onGoBack?: (gate: WorkflowStep) => void;
+  disabled?: boolean;
 }) {
   const current = statuses.findIndex((s) => s === "current" || s === "running");
   const done = statuses.filter((s) => s === "done").length;
@@ -119,6 +147,8 @@ export function WorkflowCanvas({
       : done === STEP_COUNT
         ? "All steps done"
         : "Not started";
+  const canGoBackTo = (gate: WorkflowStep | null) =>
+    !!onGoBack && !disabled && gate !== null && step !== null && STEP_ORDER.indexOf(gate) < STEP_ORDER.indexOf(step);
 
   return (
     <figure
@@ -132,11 +162,16 @@ export function WorkflowCanvas({
             const s = statuses[i];
             const Icon = node.icon;
             const live = s === "current" || s === "running";
+            const back = s === "done" && canGoBackTo(node.gate);
             return (
               <li key={node.label} className="flex items-start" aria-current={live ? "step" : undefined}>
                 {i > 0 && <Connector from={statuses[i - 1]} to={s} />}
-                <div className="flex w-[5.25rem] flex-col items-center text-center">
-                  <div className={`relative flex size-14 items-center justify-center border-2 transition duration-500 ${boxClass(node, s)}`}>
+                <NodeShell label={node.label} onClick={back ? () => onGoBack!(node.gate!) : undefined}>
+                  <div
+                    className={`relative flex size-14 items-center justify-center border-2 transition duration-300 ${boxClass(node, s)} ${
+                      back ? "group-hover:-translate-y-1 group-hover:shadow-glow-accent" : ""
+                    }`}
+                  >
                     {live && (
                       <span
                         className={`halo absolute inset-0 border-2 ${node.kind === "review" ? "rounded-full" : "rounded-2xl"} ${
@@ -144,7 +179,14 @@ export function WorkflowCanvas({
                         }`}
                       />
                     )}
-                    {s === "done" ? <CheckIcon className="size-6" /> : <Icon className="size-6" />}
+                    {s === "done" ? (
+                      <>
+                        <CheckIcon className={`size-6 ${back ? "group-hover:hidden" : ""}`} />
+                        {back && <span className="hidden text-xl font-bold leading-none group-hover:inline">↺</span>}
+                      </>
+                    ) : (
+                      <Icon className="size-6" />
+                    )}
                     {s === "running" && (
                       <span className="absolute -inset-1.5 rounded-[1.25rem] border-2 border-transparent border-t-blue motion-safe:animate-spin" />
                     )}
@@ -155,8 +197,8 @@ export function WorkflowCanvas({
                     )}
                     {live && (
                       <span
-                        className={`absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-md ${
-                          s === "running" ? "bg-blue" : "bg-accent"
+                        className={`absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-md ${
+                          s === "running" ? "bg-blue text-white" : "bg-accent text-on-accent"
                         }`}
                       >
                         {s === "running" ? "working" : "you are here"}
@@ -171,10 +213,21 @@ export function WorkflowCanvas({
                   <span className={`mt-2.5 text-xs font-semibold leading-tight ${live ? "text-ink" : s === "done" ? "text-ink/80" : "text-muted"}`}>
                     {node.label}
                   </span>
-                  <span className={`font-hand text-[15px] leading-tight ${live ? "text-accent" : "text-muted"}`}>
-                    {s === "current" ? (node.kind === "review" ? "waiting for you" : "start here") : s === "running" ? "working…" : node.note}
+                  <span className={`font-hand text-[15px] leading-tight ${live || back ? "text-accent" : "text-muted"}`}>
+                    {back ? (
+                      <>
+                        <span className="group-hover:hidden">{node.note}</span>
+                        <span className="hidden group-hover:inline">go back here</span>
+                      </>
+                    ) : s === "current" ? (
+                      node.kind === "review" ? "waiting for you" : "start here"
+                    ) : s === "running" ? (
+                      "working…"
+                    ) : (
+                      node.note
+                    )}
                   </span>
-                </div>
+                </NodeShell>
               </li>
             );
           })}
@@ -182,7 +235,14 @@ export function WorkflowCanvas({
       </div>
       <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-2.5 text-xs sm:px-6">
         <span className="font-semibold text-ink">{status}</span>
-        <span className="h-1.5 w-32 overflow-hidden rounded-full bg-card ring-1 ring-line" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100} aria-label="Workflow progress">
+        <span
+          className="h-1.5 w-32 overflow-hidden rounded-full bg-card ring-1 ring-line"
+          role="progressbar"
+          aria-valuenow={progress}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Workflow progress"
+        >
           <span className="block h-full rounded-full bg-linear-to-r from-blue to-accent transition-all duration-700" style={{ width: `${progress}%` }} />
         </span>
         <span className="flex items-center gap-3 text-muted">
@@ -192,6 +252,7 @@ export function WorkflowCanvas({
           <span className="inline-flex items-center gap-1.5">
             <span className="size-2.5 rounded-[3px] bg-blue" /> runs itself
           </span>
+          {onGoBack && <span className="hidden sm:inline">· click a finished step to go back</span>}
         </span>
         {caption && <span className="text-muted sm:ml-auto">{caption}</span>}
       </figcaption>

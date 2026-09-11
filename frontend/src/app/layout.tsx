@@ -47,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </Link>
               <Link
                 href="/analyze"
-                className="rounded-full bg-ink px-4 py-1.5 text-paper shadow-[3px_3px_0_0_var(--accent)] transition hover:-translate-y-0.5"
+                className="rounded-full bg-accent px-4 py-1.5 font-semibold text-on-accent shadow-glow-accent transition hover:-translate-y-0.5"
               >
                 New match
               </Link>

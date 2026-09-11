@@ -11,30 +11,31 @@ import {
   describeError,
   finalizeWorkflow,
   getWorkflow,
+  rewindWorkflow,
   type Workflow,
+  type WorkflowStep,
 } from "@/lib/api";
 import { RepoReview } from "./RepoReview";
 import { ResultsReview } from "./ResultsReview";
+import { TextButton } from "./ReviewFooter";
 import { ShortlistReview } from "./ShortlistReview";
 import { statusesFor, WorkflowCanvas, type Busy } from "./WorkflowCanvas";
-
-/** Lets the human step back to an earlier gate the backend still accepts. */
-type Revisit = "repos" | "shortlist" | null;
 
 export function WorkflowRunner({ initial }: { initial: Workflow }) {
   const router = useRouter();
   const [wf, setWf] = useState(initial);
   const [busy, setBusy] = useState<Busy | null>(null);
+  const [rewinding, setRewinding] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [revisit, setRevisit] = useState<Revisit>(null);
 
-  async function run(kind: Busy, action: () => Promise<Workflow>) {
-    setBusy(kind);
+  /** Runs one workflow action; `kind` animates the matching canvas node (null = quick navigation). */
+  async function run(kind: Busy | null, action: () => Promise<Workflow>) {
+    if (kind) setBusy(kind);
+    else setRewinding(true);
     setError(null);
     try {
       const next = await action();
       setWf(next);
-      setRevisit(null);
       if (next.step === "DONE" && next.analysisId) router.push(`/results/${next.analysisId}`);
     } catch (e) {
       setError(describeError(e));
@@ -44,11 +45,12 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
       }
     } finally {
       setBusy(null);
+      setRewinding(false);
     }
   }
 
-  const panel =
-    revisit === "repos" ? "REVIEW_REPOS" : revisit === "shortlist" ? "REVIEW_SHORTLIST" : wf.step;
+  const goBack = (step: WorkflowStep) => run(null, () => rewindWorkflow(wf.id, step));
+  const locked = busy !== null || rewinding;
   const login = wf.account?.login;
 
   return (
@@ -68,7 +70,7 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
           <details className="group">
             <summary className="cursor-pointer list-none font-display text-2xl font-semibold leading-snug sm:text-3xl">
               <span className="line-clamp-1 group-open:line-clamp-none">{wf.jobDescription.split("\n")[0]}</span>
-              <span className="mt-1 block text-sm font-normal text-muted font-sans">
+              <span className="mt-1 block font-sans text-sm font-normal text-muted">
                 <span className="group-open:hidden">Show full job description ▾</span>
                 <span className="hidden group-open:inline">Hide ▴</span>
               </span>
@@ -83,60 +85,61 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
       <WorkflowCanvas
         sticky
         statuses={statusesFor(wf.step, busy)}
+        step={wf.step}
+        onGoBack={goBack}
+        disabled={locked}
         caption="Nothing paid runs until you approve the shortlist."
       />
 
       {error && (
-        <div role="alert" className="rounded-xl border border-accent/30 bg-accent-soft px-4 py-3 text-sm text-ink">
+        <div role="alert" className="rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-ink">
           {error}
         </div>
       )}
 
       {/* Re-keyed per gate so each new step slides in. */}
-      <div key={panel} className="animate-rise">
-      {panel === "REVIEW_REPOS" && (
-        <RepoReview
-          key={`repos-${wf.updatedAt}`}
-          repos={wf.repos}
-          busy={busy !== null}
-          onApprove={(ids) => run("rank", () => approveRepos(wf.id, ids))}
-        />
-      )}
+      <div key={`${wf.step}-${wf.updatedAt}`} className={`animate-rise ${rewinding ? "pointer-events-none opacity-60" : ""}`}>
+        {wf.step === "REVIEW_REPOS" && (
+          <RepoReview repos={wf.repos} busy={locked} onApprove={(ids) => run("rank", () => approveRepos(wf.id, ids))} />
+        )}
 
-      {panel === "REVIEW_SHORTLIST" && (
-        <ShortlistReview
-          key={`shortlist-${wf.updatedAt}`}
-          ranking={wf.ranking}
-          busy={busy !== null}
-          onApprove={(ids) => run("judge", () => approveShortlist(wf.id, ids))}
-          onBack={wf.step === "REVIEW_SHORTLIST" ? () => setRevisit("repos") : undefined}
-        />
-      )}
+        {wf.step === "REVIEW_SHORTLIST" && (
+          <ShortlistReview
+            ranking={wf.ranking}
+            busy={locked}
+            onApprove={(ids) => run("judge", () => approveShortlist(wf.id, ids))}
+            onBack={() => goBack("REVIEW_REPOS")}
+          />
+        )}
 
-      {panel === "REVIEW_RESULTS" && (
-        <ResultsReview
-          key={`results-${wf.updatedAt}`}
-          judgements={wf.judgements}
-          acceptedIds={wf.acceptedIds}
-          usage={wf.usage}
-          llmModel={wf.llmModel}
-          busy={busy !== null}
-          onApprove={(ids) => run("save", () => finalizeWorkflow(wf.id, ids))}
-          onBack={() => setRevisit("shortlist")}
-        />
-      )}
+        {wf.step === "REVIEW_RESULTS" && (
+          <ResultsReview
+            judgements={wf.judgements}
+            acceptedIds={wf.acceptedIds}
+            usage={wf.usage}
+            llmModel={wf.llmModel}
+            busy={locked}
+            onApprove={(ids) => run("save", () => finalizeWorkflow(wf.id, ids))}
+            onBack={() => goBack("REVIEW_SHORTLIST")}
+          />
+        )}
 
-      {panel === "DONE" && (
-        <div className="rounded-2xl border border-moss/30 bg-moss-soft p-6 text-center">
-          <p className="font-display text-2xl font-semibold">Saved.</p>
-          <p className="mt-1 text-muted">Your picks are ready to share.</p>
-          {wf.analysisId && (
-            <Link href={`/results/${wf.analysisId}`} className="mt-4 inline-block font-semibold underline underline-offset-4">
-              Open the results →
-            </Link>
-          )}
-        </div>
-      )}
+        {wf.step === "DONE" && (
+          <div className="rounded-2xl border border-moss/30 bg-moss-soft p-6 text-center">
+            <p className="font-display text-2xl font-semibold">Saved.</p>
+            <p className="mt-1 text-muted">Your picks are ready to share.</p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-5">
+              {wf.analysisId && (
+                <Link href={`/results/${wf.analysisId}`} className="font-semibold underline underline-offset-4">
+                  Open the results →
+                </Link>
+              )}
+              <TextButton onClick={() => goBack("REVIEW_RESULTS")} disabled={locked}>
+                ↺ Change my picks
+              </TextButton>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ export default async function AnalyzePage({ searchParams }: { searchParams: Prom
     <div className="space-y-10">
       <div className="max-w-2xl">
         <p className="font-hand text-2xl text-accent">step one of a few</p>
-        <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight text-overprint sm:text-5xl">
+        <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight text-glow sm:text-5xl">
           Match your repos to a job
         </h1>
         <p className="mt-3 text-muted">

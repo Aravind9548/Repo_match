@@ -178,6 +178,8 @@ export const approveShortlist = (id: string, repoIds: number[]) =>
   post<Workflow>(`/api/workflows/${id}/shortlist`, { repoIds });
 export const finalizeWorkflow = (id: string, repoIds: number[]) =>
   post<Workflow>(`/api/workflows/${id}/finalize`, { repoIds });
+/** Go back to an earlier review gate, keeping the decisions made there. */
+export const rewindWorkflow = (id: string, step: WorkflowStep) => post<Workflow>(`/api/workflows/${id}/rewind`, { step });
 
 /** GitHub's generated social-preview card for a repo ("owner/name"). */
 export const repoImageUrl = (fullName: string) => `https://opengraph.githubassets.com/1/${fullName}`;

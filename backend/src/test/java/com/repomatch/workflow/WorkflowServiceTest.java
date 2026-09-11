@@ -137,6 +137,30 @@ class WorkflowServiceTest {
     }
 
     @Test
+    void rewindReturnsToAnEarlierGateAndKeepsTheLastDecision() {
+        UUID id = create().id();
+        var ranking = List.of(new RankResponse.Ranked(1, 0.6, null));
+        when(pipeline.rank(anyString(), anyList())).thenReturn(new RankResponse("embed", ranking));
+        when(pipeline.proposePool(anyList(), anyMap(), anyInt())).thenReturn(ranking);
+        service.approveRepos(id, List.of(1L));
+
+        WorkflowView back = service.rewind(id, WorkflowStep.REVIEW_REPOS);
+
+        assertThat(back.step()).isEqualTo(WorkflowStep.REVIEW_REPOS);
+        assertThat(back.repos()).filteredOn(WorkflowView.RepoOption::selected)
+                .extracting(WorkflowView.RepoOption::id).containsExactly(1L);
+        // Re-approving the gate works again after going back.
+        assertThat(service.approveRepos(id, List.of(1L, 2L)).step()).isEqualTo(WorkflowStep.REVIEW_SHORTLIST);
+    }
+
+    @Test
+    void rewindCannotGoForwardOrStayPut() {
+        UUID id = create().id();
+        assertThatThrownBy(() -> service.rewind(id, WorkflowStep.REVIEW_REPOS)).isInstanceOf(WorkflowStepException.class);
+        assertThatThrownBy(() -> service.rewind(id, WorkflowStep.REVIEW_SHORTLIST)).isInstanceOf(WorkflowStepException.class);
+    }
+
+    @Test
     void rejectsEmptyOrForeignSelections() {
         UUID id = create().id();
         assertThatThrownBy(() -> service.approveRepos(id, List.of(999L))).isInstanceOf(InvalidSelectionException.class);

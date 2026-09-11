@@ -57,7 +57,7 @@ export function RepoReview({
             <li key={repo.id}>
               <label
                 className={`group block h-full cursor-pointer overflow-hidden rounded-2xl border bg-card transition ${
-                  on ? "border-accent shadow-riso-pink ring-1 ring-accent" : "border-line opacity-60 hover:opacity-100"
+                  on ? "border-accent shadow-glow-accent ring-1 ring-accent" : "border-line opacity-60 hover:opacity-100"
                 }`}
               >
                 <div className="relative aspect-[2/1] overflow-hidden border-b border-line bg-sunken">
@@ -71,7 +71,7 @@ export function RepoReview({
                   />
                   <span
                     className={`absolute right-3 top-3 flex size-7 items-center justify-center rounded-full border-2 ${
-                      on ? "border-accent bg-accent text-white" : "border-line bg-card/90 text-transparent"
+                      on ? "border-accent bg-accent text-on-accent" : "border-line bg-card/90 text-transparent"
                     }`}
                   >
                     <CheckIcon className="size-4" />

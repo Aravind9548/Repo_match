@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.repomatch.analysis.AnalyzeRequest;
 import com.repomatch.workflow.WorkflowService;
+import com.repomatch.workflow.WorkflowStep;
 import com.repomatch.workflow.WorkflowView;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +33,15 @@ public class WorkflowController {
 
     /** The human's decision at a gate: which repos to keep. */
     public record Selection(@NotNull @Size(max = 500) List<Long> repoIds) {
+    }
+
+    /** Which earlier gate to return to. */
+    public record Rewind(@NotNull WorkflowStep step) {
+    }
+
+    @PostMapping("/{id}/rewind")
+    public WorkflowView rewind(@PathVariable UUID id, @Valid @RequestBody Rewind body) {
+        return workflows.rewind(id, body.step());
     }
 
     @PostMapping

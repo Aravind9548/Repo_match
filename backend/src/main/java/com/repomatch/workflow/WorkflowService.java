@@ -89,10 +89,33 @@ public class WorkflowService {
         return view(load(id));
     }
 
+    /**
+     * Go back to an earlier gate. Earlier decisions are kept (so the human sees and can change them);
+     * re-approving that gate recomputes everything after it. A saved analysis stays in history.
+     */
+    public WorkflowView rewind(UUID id, WorkflowStep target) {
+        WorkflowEntity wf = load(id);
+        if (target == WorkflowStep.DONE || target.ordinal() >= wf.getStep().ordinal()) {
+            throw new WorkflowStepException(wf.getStep());
+        }
+        WorkflowState st = wf.getState();
+        boolean hasData = switch (target) {
+            case REVIEW_REPOS -> true;
+            case REVIEW_SHORTLIST -> !st.ranking.isEmpty();
+            case REVIEW_RESULTS -> !st.judgements.isEmpty();
+            case DONE -> false;
+        };
+        if (!hasData) {
+            throw new InvalidSelectionException("There's nothing to go back to at that step yet.");
+        }
+        wf.setAnalysisId(null);
+        return advance(wf, target);
+    }
+
     /** Gate 1 approved → rank the chosen repos and propose a shortlist for the LLM. */
     public WorkflowView approveRepos(UUID id, List<Long> repoIds) {
         WorkflowEntity wf = load(id);
-        requireStep(wf, WorkflowStep.REVIEW_REPOS, WorkflowStep.REVIEW_SHORTLIST);
+        requireStep(wf, WorkflowStep.REVIEW_REPOS);
 
         Map<Long, RepoEntity> owned = ownedRepos(wf);
         List<RepoEntity> chosen = distinct(repoIds).stream().map(owned::get).filter(Objects::nonNull).toList();
@@ -115,7 +138,7 @@ public class WorkflowService {
     /** Gate 2 approved → the (paid) LLM judges exactly the shortlist the human approved. */
     public WorkflowView approveShortlist(UUID id, List<Long> repoIds, String clientKey) {
         WorkflowEntity wf = load(id);
-        requireStep(wf, WorkflowStep.REVIEW_SHORTLIST, WorkflowStep.REVIEW_RESULTS);
+        requireStep(wf, WorkflowStep.REVIEW_SHORTLIST);
         WorkflowState st = wf.getState();
 
         Map<Long, RepoEntity> owned = ownedRepos(wf);

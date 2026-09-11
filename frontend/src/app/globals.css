@@ -1,49 +1,51 @@
 @import "tailwindcss";
 
 /*
- * Risograph-print palette: warm paper, deep ink, fluorescent pink + electric blue overprinted.
- * Pink = things you decide, blue = things the machine does.
+ * Navy + electric blue. Electric cyan ("accent") marks things YOU decide,
+ * electric indigo ("blue") marks things the machine does.
  */
 :root {
-  --paper: #f4f0e7;
-  --card: #fffdf8;
-  --sunken: #ebe5d8;
-  --ink: #1c1a2e;
-  --muted: #5f5a72;
-  --line: #dcd5c6;
-  --accent: #eb2f86;
-  --accent-soft: #ffe0ee;
-  --blue: #3453ff;
-  --blue-soft: #e1e6ff;
-  --moss: #0e9658;
-  --moss-soft: #d8f2e4;
+  --paper: #f2f5fc;
+  --card: #ffffff;
+  --sunken: #e7ecf8;
+  --ink: #0b1540;
+  --muted: #52608f;
+  --line: #d3dbf0;
+  --accent: #0077c8;
+  --accent-soft: #dcf1ff;
+  --on-accent: #ffffff;
+  --blue: #4f46e5;
+  --blue-soft: #e6e7ff;
+  --moss: #0f9d63;
+  --moss-soft: #dcf5e9;
   --amber: #b36700;
-  --amber-soft: #ffefd2;
-  --dot: #d1c8b6;
-  --grain-opacity: 0.45;
-  --orb-opacity: 0.32;
+  --amber-soft: #fff0d6;
+  --dot: #cfd8ee;
+  --grain-opacity: 0.35;
+  --orb-opacity: 0.28;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0d0c17;
-    --card: #16152a;
-    --sunken: #1d1b35;
-    --ink: #f5f1ea;
-    --muted: #a39ebd;
-    --line: #2d2b49;
-    --accent: #ff5aa8;
-    --accent-soft: #3a1330;
-    --blue: #7188ff;
-    --blue-soft: #1a1f4f;
-    --moss: #3ddc97;
-    --moss-soft: #0e2d21;
-    --amber: #ffb547;
-    --amber-soft: #382810;
-    --dot: #25233e;
-    --grain-opacity: 0.18;
-    --orb-opacity: 0.24;
+    --paper: #060a22;
+    --card: #0c1338;
+    --sunken: #0a1030;
+    --ink: #edf2ff;
+    --muted: #93a0cf;
+    --line: #1c2660;
+    --accent: #1fe0ff;
+    --accent-soft: #06324a;
+    --on-accent: #031029;
+    --blue: #7480ff;
+    --blue-soft: #1a1d57;
+    --moss: #35e0a0;
+    --moss-soft: #0b2e25;
+    --amber: #ffc05a;
+    --amber-soft: #3a2c10;
+    --dot: #18214f;
+    --grain-opacity: 0.16;
+    --orb-opacity: 0.3;
     color-scheme: dark;
   }
 }
@@ -57,6 +59,7 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
   --color-blue: var(--blue);
   --color-blue-soft: var(--blue-soft);
   --color-moss: var(--moss);
@@ -69,27 +72,32 @@
   --font-hand: var(--font-caveat), "Segoe Print", "Comic Sans MS", cursive;
 }
 
-/* Offset "misregistered" print shadows. */
-@utility shadow-riso {
-  box-shadow: 5px 5px 0 0 var(--blue);
+/* Electric glows instead of flat drop shadows. */
+@utility shadow-glow {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--blue) 45%, transparent),
+    0 14px 34px -12px color-mix(in oklab, var(--blue) 70%, transparent);
 }
-@utility shadow-riso-pink {
-  box-shadow: 5px 5px 0 0 var(--accent);
+@utility shadow-glow-accent {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent),
+    0 14px 34px -10px color-mix(in oklab, var(--accent) 65%, transparent);
 }
-@utility text-overprint {
-  text-shadow: 0.045em 0.045em 0 color-mix(in oklab, var(--accent) 70%, transparent);
+@utility text-glow {
+  text-shadow: 0 0 28px color-mix(in oklab, var(--accent) 45%, transparent);
 }
 
 body {
   background-color: var(--paper);
   color: var(--ink);
   font-family: var(--font-sans);
+  overflow-x: clip;
   /* Faint dot grid, like a workflow canvas. */
   background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
   background-size: 22px 22px;
 }
 
-/* Two soft ink orbs far behind everything. */
+/* Two soft electric orbs far behind everything. */
 body::after {
   content: "";
   position: fixed;
@@ -99,11 +107,11 @@ body::after {
   opacity: var(--orb-opacity);
   filter: blur(40px);
   background:
-    radial-gradient(38% 34% at 14% 20%, var(--accent), transparent 70%),
-    radial-gradient(36% 32% at 86% 76%, var(--blue), transparent 70%);
+    radial-gradient(38% 34% at 12% 22%, var(--accent), transparent 70%),
+    radial-gradient(36% 32% at 88% 78%, var(--blue), transparent 70%);
 }
 
-/* Paper grain over the background (never intercepts clicks). */
+/* Subtle grain over the background (never intercepts clicks). */
 body::before {
   content: "";
   position: fixed;
@@ -111,7 +119,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.35 0 0 0 0 0.5 0 0 0 0.09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
 ::selection {
@@ -136,6 +144,16 @@ body::before {
 @keyframes march {
   to {
     stroke-dashoffset: -24;
+  }
+}
+@keyframes trail {
+  to {
+    stroke-dashoffset: -500;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0.15;
   }
 }
 @keyframes spin-y {
@@ -188,6 +206,13 @@ body::before {
   stroke-dasharray: 6 6;
   animation: march 0.8s linear infinite;
 }
+.trail {
+  stroke-dasharray: 160 90;
+  animation: trail 7s linear infinite;
+}
+.blink {
+  animation: blink 2.4s steps(2) infinite;
+}
 .spin-y {
   animation: spin-y 16s linear infinite;
 }
@@ -206,6 +231,8 @@ body::before {
 
 @media (prefers-reduced-motion: reduce) {
   .connector-running,
+  .trail,
+  .blink,
   .spin-y,
   .tumble,
   .bob,

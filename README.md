@@ -74,6 +74,7 @@ The paid LLM step can only run after the shortlist is approved, and it judges ex
 | `POST` | `/api/workflows/{id}/repos` | `{repoIds}` approve gate 1 → rank, propose a shortlist |
 | `POST` | `/api/workflows/{id}/shortlist` | `{repoIds}` approve gate 2 → Gemini judges exactly these |
 | `POST` | `/api/workflows/{id}/finalize` | `{repoIds}` approve gate 3 → save accepted picks as an analysis |
+| `POST` | `/api/workflows/{id}/rewind` | `{step}` go back to an earlier gate, keeping the decisions made there |
 | `POST` | `/api/analyze` | One-shot analysis with no review gates (API clients) |
 | `GET` | `/api/analyses/{id}` | Re-open a saved analysis |
 | `GET` | `/api/analyses?username=` | Recent analyses for a user |

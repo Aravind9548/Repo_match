@@ -101,7 +101,7 @@ export function ShortlistReview({
         }
       >
         <PrimaryButton
-          tone="accent"
+          tone="blue"
           disabled={busy || picked.size === 0 || tooMany}
           onClick={() => onApprove(ranking.filter((r) => picked.has(r.id)).map((r) => r.id))}
         >
