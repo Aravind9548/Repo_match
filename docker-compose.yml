@@ -1,0 +1,48 @@
+# Local development stack.
+#   Just the database:   docker compose up -d postgres
+#   Everything:          docker compose up --build
+services:
+  postgres:
+    # pgvector image = plain Postgres 16 plus the vector extension (used in phase 2).
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-repomatch}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-repomatch}
+      POSTGRES_DB: ${POSTGRES_DB:-repomatch}
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ai-service:
+    build: ./ai-service
+    env_file: .env
+    environment:
+      # Vertex auth inside the container: mount your gcloud ADC file (see README).
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/adc.json
+    volumes:
+      - ${GCLOUD_ADC_FILE:-./.secrets/adc.json}:/secrets/adc.json:ro
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-repomatch}
+      AI_SERVICE_URL: http://ai-service:8000
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-service:
+        condition: service_started
+
+volumes:
+  pgdata:

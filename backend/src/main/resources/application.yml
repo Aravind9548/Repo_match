@@ -1,0 +1,58 @@
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: repomatch-backend
+  config:
+    # Local dev: pick up the repo-root .env (KEY=VALUE is valid .properties syntax).
+    import:
+      - optional:file:../.env[.properties]
+      - optional:file:.env[.properties]
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5434/repomatch}
+    username: ${POSTGRES_USER:repomatch}
+    password: ${POSTGRES_PASSWORD:repomatch}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+
+repomatch:
+  github:
+    base-url: https://api.github.com
+    token: ${GITHUB_TOKEN:}
+    # Re-use a user's cached repos for this long before hitting GitHub again.
+    cache-ttl: 10m
+    max-readme-chars: 12000
+    max-parallel-requests: 8
+  ai:
+    base-url: ${AI_SERVICE_URL:http://localhost:8000}
+    connect-timeout: 5s
+    read-timeout: 180s
+  analysis:
+    default-top-k: 5
+    max-top-k: 10
+    # Candidates sent to the LLM re-ranker: max(top-k + extra, min).
+    rerank-pool-extra: 3
+    rerank-pool-min: 12
+    # Short keyword JDs make near-empty repos look deceptively similar; they only fill leftover LLM slots.
+    min-readme-chars: 100
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,31 @@
+# Secrets
+.env
+*.env.local
+.secrets/
+**/credentials*.json
+**/service-account*.json
+
+# Java / Maven
+backend/target/
+*.class
+*.log
+
+# Python
+ai-service/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
