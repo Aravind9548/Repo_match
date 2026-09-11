@@ -39,7 +39,7 @@ export default async function ResultsPage({ params }: { params: Promise<{ id: st
         )}
         <div className="min-w-0">
           <p className="font-hand text-xl text-accent">{login ? `${login}'s shortlist` : "the shortlist"}</p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-overprint sm:text-4xl">
             Your best{" "}
             <span className="relative inline-block">
               {matches.length}

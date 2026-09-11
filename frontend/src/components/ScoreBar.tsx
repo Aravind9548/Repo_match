@@ -1,5 +1,5 @@
 export function ScoreBar({ value, label }: { value: number; label: string }) {
-  const tone = value >= 75 ? "bg-moss" : value >= 50 ? "bg-amber" : "bg-muted";
+  const tone = value >= 75 ? "bg-linear-to-r from-blue to-accent" : value >= 50 ? "bg-amber" : "bg-muted";
   return (
     <div
       role="meter"

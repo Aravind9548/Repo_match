@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Caveat, Fraunces, Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { FloatingShapes } from "@/components/Shapes3D";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -17,10 +18,11 @@ export const metadata: Metadata = {
 function Logo() {
   return (
     <svg viewBox="0 0 32 32" className="size-8" aria-hidden>
-      <rect x="2.5" y="2.5" width="27" height="27" rx="8" className="fill-ink" />
-      <circle cx="11" cy="11.5" r="3" className="fill-paper" />
-      <circle cx="21" cy="20.5" r="3" className="fill-accent" />
-      <path d="M13 13.5c3 1 3.5 4 6 5.5" fill="none" className="stroke-paper" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="4" y="4" width="26" height="26" rx="8" className="fill-blue" />
+      <rect x="2" y="2" width="26" height="26" rx="8" className="fill-ink" />
+      <circle cx="10.5" cy="11" r="3" className="fill-blue" />
+      <circle cx="19.5" cy="19" r="3" className="fill-accent" />
+      <path d="M12.5 13c3 1 3.5 4 5.5 5" fill="none" className="stroke-paper" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
@@ -32,8 +34,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${caveat.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <header className="sticky top-0 z-30 border-b border-line bg-paper/85 backdrop-blur">
-          <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <FloatingShapes />
+        <header className="sticky top-0 z-30 h-14 border-b border-line bg-paper/85 backdrop-blur">
+          <nav className="mx-auto flex h-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
             <Link href="/" className="flex items-center gap-2.5">
               <Logo />
               <span className="font-display text-xl font-semibold tracking-tight">RepoMatch</span>
@@ -42,7 +45,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <Link href="/history" className="text-muted hover:text-ink">
                 History
               </Link>
-              <Link href="/analyze" className="rounded-full bg-ink px-4 py-1.5 text-paper transition hover:bg-accent">
+              <Link
+                href="/analyze"
+                className="rounded-full bg-ink px-4 py-1.5 text-paper shadow-[3px_3px_0_0_var(--accent)] transition hover:-translate-y-0.5"
+              >
                 New match
               </Link>
             </div>

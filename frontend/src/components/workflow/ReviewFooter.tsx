@@ -15,12 +15,13 @@ export function PrimaryButton({
   tone = "ink",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { tone?: "ink" | "accent" }) {
-  const colors = tone === "accent" ? "bg-accent text-white hover:brightness-110" : "bg-ink text-paper hover:bg-accent";
+  const colors =
+    tone === "accent" ? "bg-accent text-white shadow-riso hover:shadow-riso-pink" : "bg-ink text-paper shadow-riso-pink hover:shadow-riso";
   return (
     <button
       type="button"
       {...props}
-      className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${colors}`}
+      className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 ${colors}`}
     >
       {children}
     </button>

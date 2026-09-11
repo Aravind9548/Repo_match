@@ -14,8 +14,8 @@ export function MatchCard({
 }) {
   return (
     <article
-      className={`rounded-2xl border border-line bg-card p-5 shadow-sm shadow-ink/5 transition sm:p-6 ${
-        dimmed ? "opacity-55" : ""
+      className={`rounded-2xl border border-line bg-card p-5 transition duration-300 sm:p-6 ${
+        dimmed ? "opacity-55" : "hover:-translate-y-0.5 hover:shadow-riso"
       }`}
     >
       <header className="flex items-start gap-4">

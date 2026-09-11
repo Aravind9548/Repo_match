@@ -1,40 +1,49 @@
 @import "tailwindcss";
 
-/* Warm paper + ink palette. Tokens are redefined for dark mode below. */
+/*
+ * Risograph-print palette: warm paper, deep ink, fluorescent pink + electric blue overprinted.
+ * Pink = things you decide, blue = things the machine does.
+ */
 :root {
-  --paper: #f6f1e8;
-  --card: #fffcf6;
-  --sunken: #efe8dc;
-  --ink: #221f1a;
-  --muted: #6b6358;
-  --line: #e2d9ca;
-  --accent: #c8421a;
-  --accent-soft: #fbe4d9;
-  --moss: #2e6a4c;
-  --moss-soft: #dfeee5;
-  --amber: #8f5c10;
-  --amber-soft: #f8ecd2;
-  --dot: #d6cbb9;
-  --grain-opacity: 0.5;
+  --paper: #f4f0e7;
+  --card: #fffdf8;
+  --sunken: #ebe5d8;
+  --ink: #1c1a2e;
+  --muted: #5f5a72;
+  --line: #dcd5c6;
+  --accent: #eb2f86;
+  --accent-soft: #ffe0ee;
+  --blue: #3453ff;
+  --blue-soft: #e1e6ff;
+  --moss: #0e9658;
+  --moss-soft: #d8f2e4;
+  --amber: #b36700;
+  --amber-soft: #ffefd2;
+  --dot: #d1c8b6;
+  --grain-opacity: 0.45;
+  --orb-opacity: 0.32;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #15130f;
-    --card: #1e1b16;
-    --sunken: #27231c;
-    --ink: #f1ebe0;
-    --muted: #a89f91;
-    --line: #363027;
-    --accent: #f0764a;
-    --accent-soft: #3b2218;
-    --moss: #80c79f;
-    --moss-soft: #1b3326;
-    --amber: #e3b465;
-    --amber-soft: #3a2d15;
-    --dot: #2d2922;
-    --grain-opacity: 0.25;
+    --paper: #0d0c17;
+    --card: #16152a;
+    --sunken: #1d1b35;
+    --ink: #f5f1ea;
+    --muted: #a39ebd;
+    --line: #2d2b49;
+    --accent: #ff5aa8;
+    --accent-soft: #3a1330;
+    --blue: #7188ff;
+    --blue-soft: #1a1f4f;
+    --moss: #3ddc97;
+    --moss-soft: #0e2d21;
+    --amber: #ffb547;
+    --amber-soft: #382810;
+    --dot: #25233e;
+    --grain-opacity: 0.18;
+    --orb-opacity: 0.24;
     color-scheme: dark;
   }
 }
@@ -48,6 +57,8 @@
   --color-line: var(--line);
   --color-accent: var(--accent);
   --color-accent-soft: var(--accent-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
   --color-moss: var(--moss);
   --color-moss-soft: var(--moss-soft);
   --color-amber: var(--amber);
@@ -56,6 +67,17 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --font-hand: var(--font-caveat), "Segoe Print", "Comic Sans MS", cursive;
+}
+
+/* Offset "misregistered" print shadows. */
+@utility shadow-riso {
+  box-shadow: 5px 5px 0 0 var(--blue);
+}
+@utility shadow-riso-pink {
+  box-shadow: 5px 5px 0 0 var(--accent);
+}
+@utility text-overprint {
+  text-shadow: 0.045em 0.045em 0 color-mix(in oklab, var(--accent) 70%, transparent);
 }
 
 body {
@@ -67,7 +89,21 @@ body {
   background-size: 22px 22px;
 }
 
-/* Paper grain over everything (behind content, never intercepts clicks). */
+/* Two soft ink orbs far behind everything. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -3;
+  pointer-events: none;
+  opacity: var(--orb-opacity);
+  filter: blur(40px);
+  background:
+    radial-gradient(38% 34% at 14% 20%, var(--accent), transparent 70%),
+    radial-gradient(36% 32% at 86% 76%, var(--blue), transparent 70%);
+}
+
+/* Paper grain over the background (never intercepts clicks). */
 body::before {
   content: "";
   position: fixed;
@@ -82,18 +118,99 @@ body::before {
   background: var(--accent-soft);
 }
 
-/* Workflow connectors: marching dashes while a step runs. */
+/* --- 3D cuboids ------------------------------------------------------------ */
+.scene3d {
+  perspective: 900px;
+}
+.cuboid {
+  position: relative;
+  transform-style: preserve-3d;
+}
+.cuboid-face {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* --- Motion ---------------------------------------------------------------- */
 @keyframes march {
   to {
     stroke-dashoffset: -24;
   }
 }
+@keyframes spin-y {
+  from {
+    transform: rotateX(-22deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(-22deg) rotateY(360deg);
+  }
+}
+@keyframes tumble {
+  from {
+    transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(360deg) rotateY(720deg) rotateZ(360deg);
+  }
+}
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+@keyframes halo {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .connector-running {
   stroke-dasharray: 6 6;
   animation: march 0.8s linear infinite;
 }
+.spin-y {
+  animation: spin-y 16s linear infinite;
+}
+.tumble {
+  animation: tumble 30s linear infinite;
+}
+.bob {
+  animation: bob 7s ease-in-out infinite;
+}
+.halo {
+  animation: halo 1.8s ease-out infinite;
+}
+.animate-rise {
+  animation: rise 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .connector-running {
+  .connector-running,
+  .spin-y,
+  .tumble,
+  .bob,
+  .halo,
+  .animate-rise {
     animation: none;
   }
 }

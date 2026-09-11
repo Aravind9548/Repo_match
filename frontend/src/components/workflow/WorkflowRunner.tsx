@@ -81,8 +81,9 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
       </header>
 
       <WorkflowCanvas
+        sticky
         statuses={statusesFor(wf.step, busy)}
-        caption="Round nodes wait for you. Nothing paid runs until you approve the shortlist."
+        caption="Nothing paid runs until you approve the shortlist."
       />
 
       {error && (
@@ -91,6 +92,8 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
         </div>
       )}
 
+      {/* Re-keyed per gate so each new step slides in. */}
+      <div key={panel} className="animate-rise">
       {panel === "REVIEW_REPOS" && (
         <RepoReview
           key={`repos-${wf.updatedAt}`}
@@ -134,6 +137,7 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

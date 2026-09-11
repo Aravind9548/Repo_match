@@ -57,7 +57,7 @@ export function RepoReview({
             <li key={repo.id}>
               <label
                 className={`group block h-full cursor-pointer overflow-hidden rounded-2xl border bg-card transition ${
-                  on ? "border-accent shadow-md shadow-accent/10 ring-1 ring-accent" : "border-line opacity-70 hover:opacity-100"
+                  on ? "border-accent shadow-riso-pink ring-1 ring-accent" : "border-line opacity-60 hover:opacity-100"
                 }`}
               >
                 <div className="relative aspect-[2/1] overflow-hidden border-b border-line bg-sunken">

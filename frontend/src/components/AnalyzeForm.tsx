@@ -11,13 +11,23 @@ const MAX_JD = 20000;
 const inputClass =
   "mt-1.5 block w-full rounded-xl border border-line bg-card px-3.5 py-2.5 text-base shadow-sm outline-none transition placeholder:text-muted/70 focus:border-ink focus:ring-4 focus:ring-ink/5 disabled:opacity-60";
 
-export function AnalyzeForm({ initialUsername = "" }: { initialUsername?: string }) {
+export function AnalyzeForm({
+  initialUsername = "",
+  onPendingChange,
+}: {
+  initialUsername?: string;
+  onPendingChange?: (pending: boolean) => void;
+}) {
   const router = useRouter();
   const [username, setUsername] = useState(initialUsername);
   const [jobDescription, setJobDescription] = useState("");
   const [topK, setTopK] = useState(5);
   const [includeForks, setIncludeForks] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [pending, setPendingState] = useState(false);
+  const setPending = (p: boolean) => {
+    setPendingState(p);
+    onPendingChange?.(p);
+  };
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -140,7 +150,7 @@ export function AnalyzeForm({ initialUsername = "" }: { initialUsername?: string
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-paper shadow-md shadow-ink/10 transition hover:bg-accent disabled:cursor-wait disabled:opacity-70"
+          className="inline-flex items-center gap-2 rounded-full bg-ink px-6 py-3 font-semibold text-paper shadow-riso-pink transition hover:-translate-y-0.5 hover:shadow-riso disabled:cursor-wait disabled:opacity-70"
         >
           {pending ? "Fetching your repos…" : "Start — fetch my repos"}
           {!pending && <ArrowRightIcon className="size-4" />}
