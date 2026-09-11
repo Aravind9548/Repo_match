@@ -1,0 +1,7 @@
+# Normalize line endings in the repo; Dockerfiles and shell scripts must stay LF.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary
+*.ico binary

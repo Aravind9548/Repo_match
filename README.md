@@ -23,6 +23,7 @@ Paste a job description, get back which of your GitHub projects to put on the re
 |---|---|
 | `backend/` | Spring Boot 3.5 / Java 21 — REST API, GitHub client, JPA + Flyway, orchestration |
 | `ai-service/` | FastAPI — `/rank` (embed + cosine) and `/explain` (grounded LLM reasons) |
+| `frontend/` | Next.js 16 / React 19 / Tailwind v4 — landing, analyze form, results pages |
 | `docker-compose.yml` | Postgres (pgvector image) + both services |
 
 ## Running locally
@@ -41,7 +42,16 @@ python -m venv .venv && .venv/Scripts/pip install -r requirements-dev.txt   # or
 # Backend (port 8081)
 cd backend
 mvn spring-boot:run
+
+# Frontend (port 3000) — expects the backend on localhost:8081
+cd frontend
+npm install
+npm run dev
 ```
+
+Frontend env (optional, e.g. in `frontend/.env.local`): `NEXT_PUBLIC_API_BASE_URL` (browser → API, default `http://localhost:8081`) and `API_BASE_URL` (server components → API, defaults to the public URL). The backend's allowed CORS origins are set with `CORS_ALLOWED_ORIGINS`.
+
+Pages: `/` landing · `/analyze` (username + JD form) · `/results/{id}` (shareable, re-openable result).
 
 Or everything in containers: `docker compose -p repomatch up --build` (set `GCLOUD_ADC_FILE` in `.env` to a service-account key for Vertex).
 

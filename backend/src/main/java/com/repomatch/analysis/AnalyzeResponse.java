@@ -9,6 +9,7 @@ import com.repomatch.api.AccountSummary;
 public record AnalyzeResponse(
         UUID id,
         AccountSummary account,
+        String jobDescription,
         int reposAnalyzed,
         String embeddingModel,
         String llmModel,
@@ -19,7 +20,8 @@ public record AnalyzeResponse(
 
     static AnalyzeResponse of(AnalysisEntity e, AccountSummary account) {
         AnalysisResults r = e.getResults();
-        return new AnalyzeResponse(e.getId(), account, r.reposAnalyzed(), e.getEmbeddingModel(), e.getLlmModel(),
+        return new AnalyzeResponse(e.getId(), account, e.getJobDescription(), r.reposAnalyzed(),
+                e.getEmbeddingModel(), e.getLlmModel(),
                 r.matches(), r.otherRepos(), r.warnings(), e.getCreatedAt());
     }
 }
