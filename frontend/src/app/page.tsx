@@ -74,7 +74,11 @@ export default function Home() {
           <CurlyArrow className="mb-[-10px] hidden h-10 w-14 text-muted sm:block" />
           <span className="font-hand text-xl text-muted">it waits for you at every round step</span>
         </div>
-        <WorkflowCanvas statuses={statusesFor("REVIEW_SHORTLIST", null)} caption="An example run, paused at the shortlist." />
+        <WorkflowCanvas
+          demo
+          statuses={statusesFor("REVIEW_SHORTLIST", null)}
+          caption="Nobody's repos here yet — start a run to see your own."
+        />
       </section>
 
       <section aria-labelledby="control" className="grid gap-8 lg:grid-cols-[1fr_2fr]">

@@ -128,11 +128,14 @@ export function WorkflowCanvas({
   step = null,
   onGoBack,
   disabled = false,
+  demo = false,
 }: {
   statuses: NodeStatus[];
   caption?: string;
   /** Pin under the site header so the current step stays visible while reviewing. */
   sticky?: boolean;
+  /** Illustration on the landing page — must not read as the visitor's own progress. */
+  demo?: boolean;
   /** Where the workflow currently is; finished nodes before it become clickable. */
   step?: WorkflowStep | null;
   onGoBack?: (gate: WorkflowStep) => void;
@@ -201,7 +204,7 @@ export function WorkflowCanvas({
                           s === "running" ? "bg-blue text-white" : "bg-accent text-on-accent"
                         }`}
                       >
-                        {s === "running" ? "working" : "you are here"}
+                        {demo ? "example step" : s === "running" ? "working" : "you are here"}
                         <span
                           className={`absolute left-1/2 top-full -translate-x-1/2 border-x-[5px] border-t-[5px] border-x-transparent ${
                             s === "running" ? "border-t-blue" : "border-t-accent"
@@ -219,7 +222,7 @@ export function WorkflowCanvas({
                         <span className="group-hover:hidden">{node.note}</span>
                         <span className="hidden group-hover:inline">go back here</span>
                       </>
-                    ) : s === "current" ? (
+                    ) : !demo && s === "current" ? (
                       node.kind === "review" ? "waiting for you" : "start here"
                     ) : s === "running" ? (
                       "working…"
@@ -234,7 +237,12 @@ export function WorkflowCanvas({
         </ol>
       </div>
       <figcaption className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-2.5 text-xs sm:px-6">
-        <span className="font-semibold text-ink">{status}</span>
+        {demo && (
+          <span className="rounded-full border border-amber/40 bg-amber-soft px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-amber">
+            Example flow
+          </span>
+        )}
+        <span className="font-semibold text-ink">{demo ? `A run would pause here · ${PIPELINE[current]?.label ?? ""}` : status}</span>
         <span
           className="h-1.5 w-32 overflow-hidden rounded-full bg-card ring-1 ring-line"
           role="progressbar"
