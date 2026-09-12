@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Self-contained server bundle for the Docker image (Cloud Run).
-  output: "standalone",
+  // Self-contained server bundle for our own Docker image; Vercel builds its own way.
+  output: process.env.VERCEL ? undefined : "standalone",
   images: {
     remotePatterns: [
       // GitHub profile pictures
