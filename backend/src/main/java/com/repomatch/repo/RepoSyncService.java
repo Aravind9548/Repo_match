@@ -155,6 +155,7 @@ public class RepoSyncService {
         e.setStars(r.stargazersCount());
         e.setFork(r.fork());
         e.setArchived(r.archived());
+        e.setDefaultBranch(r.defaultBranch());
         e.setPushedAt(r.pushedAt());
         e.setReadme(readme);
         e.setProfileText(ProfileBuilder.build(e));

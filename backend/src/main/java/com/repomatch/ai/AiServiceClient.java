@@ -9,6 +9,10 @@ import org.springframework.web.client.RestClientResponseException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.repomatch.ai.dto.AnswerRequest;
+import com.repomatch.ai.dto.AnswerResponse;
+import com.repomatch.ai.dto.EmbedRequest;
+import com.repomatch.ai.dto.EmbedResponse;
 import com.repomatch.ai.dto.ExplainRequest;
 import com.repomatch.ai.dto.ExplainResponse;
 import com.repomatch.ai.dto.RankRequest;
@@ -32,6 +36,16 @@ public class AiServiceClient {
 
     public ExplainResponse explain(ExplainRequest request) {
         return post("/explain", request, ExplainResponse.class);
+    }
+
+    /** General embeddings — used to index repository code for "ask your codebase". */
+    public EmbedResponse embed(EmbedRequest request) {
+        return post("/embed", request, EmbedResponse.class);
+    }
+
+    /** Answers a question from retrieved code chunks, with citations verified against them. */
+    public AnswerResponse answer(AnswerRequest request) {
+        return post("/answer", request, AnswerResponse.class);
     }
 
     private <T> T post(String path, Object body, Class<T> type) {

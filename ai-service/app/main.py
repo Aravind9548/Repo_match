@@ -6,12 +6,23 @@ from fastapi import Depends, FastAPI, HTTPException
 from google.auth import exceptions as auth_errors
 from google.genai import errors as genai_errors
 
+from app.answerer import Answerer, GeminiAnswerer
 from app.config import get_settings
 from app.embeddings import Embedder, GeminiEmbedder
 from app.explainer import Explainer, GeminiExplainer
 from app.gemini import build_clients
 from app.ranking import cosine_similarities
-from app.schemas import ExplainRequest, ExplainResponse, RankedRepo, RankRequest, RankResponse
+from app.schemas import (
+    AnswerRequest,
+    AnswerResponse,
+    EmbedRequest,
+    EmbedResponse,
+    ExplainRequest,
+    ExplainResponse,
+    RankedRepo,
+    RankRequest,
+    RankResponse,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("repomatch.ai")
@@ -32,6 +43,11 @@ def get_embedder() -> Embedder:
 def get_explainer() -> Explainer:
     s = get_settings()
     return GeminiExplainer(_clients().llm, s.llm_model, s.llm_temperature, s.max_readme_chars_in_prompt)
+
+
+def get_answerer() -> Answerer:
+    s = get_settings()
+    return GeminiAnswerer(_clients().llm, s.llm_model, s.llm_temperature)
 
 
 def _upstream_error(e: Exception) -> HTTPException:
@@ -81,6 +97,29 @@ async def rank(req: RankRequest, embedder: Embedder = Depends(get_embedder)) -> 
     ]
     log.info("ranked %d repos (%d embedded, %d cached)", len(ids), len(fresh), len(cached))
     return RankResponse(embedding_model=embedder.model, results=results)
+
+
+@app.post("/embed", response_model=EmbedResponse)
+async def embed(req: EmbedRequest, embedder: Embedder = Depends(get_embedder)) -> EmbedResponse:
+    """General embedding endpoint — used to index repository code for 'ask your codebase'."""
+    try:
+        vectors = (
+            await embedder.embed_documents(req.texts)
+            if req.kind == "document"
+            else [await embedder.embed_query(req.texts[0])]
+        )
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
+    return EmbedResponse(model=embedder.model, vectors=vectors)
+
+
+@app.post("/answer", response_model=AnswerResponse)
+async def answer(req: AnswerRequest, answerer: Answerer = Depends(get_answerer)) -> AnswerResponse:
+    """Answers a question about a repository from retrieved code chunks, with verified citations."""
+    try:
+        return await answerer.answer(req.repo, req.question, req.chunks)
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
 
 
 @app.post("/explain", response_model=ExplainResponse)

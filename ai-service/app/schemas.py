@@ -59,3 +59,47 @@ class ExplainResponse(BaseModel):
     llm_model: str
     results: list[RepoExplanation]
     usage: TokenUsage | None = None
+
+
+# --- Ask your codebase ------------------------------------------------------
+
+
+class EmbedRequest(BaseModel):
+    """General-purpose embedding, used to index repository code chunks."""
+
+    texts: list[str] = Field(min_length=1, max_length=400)
+    # "document" for stored content, "query" for a question.
+    kind: str = Field(default="document", pattern="^(document|query)$")
+
+
+class EmbedResponse(BaseModel):
+    model: str
+    vectors: list[list[float]]
+
+
+class CodeChunk(BaseModel):
+    path: str
+    start_line: int = Field(ge=1)
+    end_line: int = Field(ge=1)
+    text: str
+
+
+class AnswerRequest(BaseModel):
+    repo: str
+    question: str = Field(min_length=3, max_length=1000)
+    chunks: list[CodeChunk] = Field(min_length=1, max_length=40)
+
+
+class Citation(BaseModel):
+    path: str
+    start_line: int
+    end_line: int
+
+
+class AnswerResponse(BaseModel):
+    llm_model: str
+    answer: str
+    citations: list[Citation] = []
+    # False when the retrieved code doesn't contain the answer.
+    answered: bool = True
+    usage: TokenUsage | None = None

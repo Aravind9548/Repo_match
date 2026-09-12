@@ -114,6 +114,60 @@ export type Workflow = {
   updatedAt: string;
 };
 
+// --- Ask your codebase ------------------------------------------------------
+
+export type RepoSummary = {
+  id: number;
+  name: string;
+  url: string;
+  description: string | null;
+  languages: string[];
+  stars: number;
+  fork: boolean;
+  pushedAt: string | null;
+  readmeChars: number;
+};
+
+export type RepoListResponse = {
+  account: AccountSummary;
+  fromCache: boolean;
+  repos: RepoSummary[];
+};
+
+export type IndexSummary = {
+  repoId: number;
+  repo: string;
+  commitSha: string | null;
+  fileCount: number;
+  chunkCount: number;
+  skippedFiles: number;
+  model: string | null;
+  indexedAt: string;
+  rebuilt: boolean;
+};
+
+export type CodeSource = {
+  path: string;
+  startLine: number;
+  endLine: number;
+  /** The indexed code behind a citation; null for the "searched" list. */
+  snippet: string | null;
+  similarity: number;
+};
+
+export type CodeAnswer = {
+  repoId: number;
+  repo: string;
+  question: string;
+  answer: string;
+  /** False when the indexed code doesn't contain the answer. */
+  answered: boolean;
+  citations: CodeSource[];
+  searched: CodeSource[];
+  llmModel: string | null;
+  usage: TokenUsage | null;
+};
+
 /** RFC 7807 problem document returned by the backend on errors. */
 export type Problem = {
   status: number;
@@ -180,6 +234,12 @@ export const finalizeWorkflow = (id: string, repoIds: number[]) =>
   post<Workflow>(`/api/workflows/${id}/finalize`, { repoIds });
 /** Go back to an earlier review gate, keeping the decisions made there. */
 export const rewindWorkflow = (id: string, step: WorkflowStep) => post<Workflow>(`/api/workflows/${id}/rewind`, { step });
+
+export const listRepos = (username: string) => request<RepoListResponse>(`/api/repos/${encodeURIComponent(username)}`);
+export const getIndexStatus = (repoId: number) => request<IndexSummary>(`/api/repos/${repoId}/index`);
+export const indexRepo = (repoId: number, force = false) =>
+  post<IndexSummary>(`/api/repos/${repoId}/index?force=${force}`, {});
+export const askRepo = (repoId: number, question: string) => post<CodeAnswer>(`/api/repos/${repoId}/ask`, { question });
 
 /** GitHub's generated social-preview card for a repo ("owner/name"). */
 export const repoImageUrl = (fullName: string) => `https://opengraph.githubassets.com/1/${fullName}`;

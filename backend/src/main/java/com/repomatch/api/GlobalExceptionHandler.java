@@ -21,6 +21,9 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import com.repomatch.ai.AiServiceException;
 import com.repomatch.analysis.AnalysisNotFoundException;
 import com.repomatch.analysis.NoRepositoriesException;
+import com.repomatch.code.NotIndexedException;
+import com.repomatch.code.NothingToIndexException;
+import com.repomatch.code.RepoNotFoundException;
 import com.repomatch.analysis.UsageLimitException;
 import com.repomatch.workflow.InvalidSelectionException;
 import com.repomatch.workflow.WorkflowNotFoundException;
@@ -64,6 +67,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
                 .body(pd);
+    }
+
+    @ExceptionHandler(RepoNotFoundException.class)
+    ProblemDetail repoNotFound(RepoNotFoundException e) {
+        return problem(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
+    }
+
+    @ExceptionHandler({NotIndexedException.class, NothingToIndexException.class})
+    ProblemDetail notIndexed(RuntimeException e) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, "Not indexed", e.getMessage());
     }
 
     @ExceptionHandler(NoRepositoriesException.class)

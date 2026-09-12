@@ -19,6 +19,7 @@ public record GitHubRepo(
         int stargazersCount,
         boolean fork,
         boolean archived,
+        String defaultBranch,
         Instant pushedAt,
         Owner owner) {
 

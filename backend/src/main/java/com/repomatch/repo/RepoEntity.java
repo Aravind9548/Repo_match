@@ -39,6 +39,7 @@ public class RepoEntity {
     private int stars;
     private boolean fork;
     private boolean archived;
+    private String defaultBranch;
     private Instant pushedAt;
     private String readme;
     private String profileText;
@@ -91,6 +92,8 @@ public class RepoEntity {
     public void setFork(boolean fork) { this.fork = fork; }
     public boolean isArchived() { return archived; }
     public void setArchived(boolean archived) { this.archived = archived; }
+    public String getDefaultBranch() { return defaultBranch; }
+    public void setDefaultBranch(String defaultBranch) { this.defaultBranch = defaultBranch; }
     public Instant getPushedAt() { return pushedAt; }
     public void setPushedAt(Instant pushedAt) { this.pushedAt = pushedAt; }
     public String getReadme() { return readme; }

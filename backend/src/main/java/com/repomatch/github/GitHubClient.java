@@ -18,6 +18,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import com.repomatch.github.dto.GitHubRepo;
+import com.repomatch.github.dto.GitHubTree;
 import com.repomatch.github.dto.GitHubUser;
 
 /** Thin wrapper over the GitHub REST API: users, repos, READMEs and language breakdowns. */
@@ -94,6 +95,38 @@ public class GitHubClient {
                     return res.bodyTo(new ParameterizedTypeReference<Map<String, Long>>() {});
                 }));
         return langs == null ? Map.of() : langs;
+    }
+
+    /** Every file in a branch, flattened. Truncated for very large repos (GitHub's own limit). */
+    public GitHubTree getTree(String owner, String repo, String branch) {
+        GitHubTree tree = call(() -> http.get()
+                .uri("/repos/{owner}/{repo}/git/trees/{branch}?recursive=1", owner, repo, branch)
+                .exchange((req, res) -> {
+                    if (res.getStatusCode().value() == 404 || res.getStatusCode().value() == 409) {
+                        return null; // unknown branch, or an empty repository
+                    }
+                    if (res.getStatusCode().isError()) {
+                        throwForStatus(res);
+                    }
+                    return res.bodyTo(GitHubTree.class);
+                }));
+        return tree == null ? new GitHubTree(null, List.of(), false) : tree;
+    }
+
+    /** Raw text of one file, or empty when it's missing or not text. */
+    public Optional<String> getFileContent(String owner, String repo, String path, String ref) {
+        return Optional.ofNullable(call(() -> http.get()
+                .uri("/repos/{owner}/{repo}/contents/{path}?ref={ref}", owner, repo, path, ref)
+                .header(HttpHeaders.ACCEPT, "application/vnd.github.raw+json")
+                .exchange((req, res) -> {
+                    if (res.getStatusCode().value() == 404 || res.getStatusCode().value() == 403) {
+                        return null;
+                    }
+                    if (res.getStatusCode().isError()) {
+                        throwForStatus(res);
+                    }
+                    return new String(res.getBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                })));
     }
 
     private static void throwForStatus(ClientHttpResponse res) throws java.io.IOException {
