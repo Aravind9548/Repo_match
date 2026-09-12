@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.repomatch.code.AskService;
 import com.repomatch.code.CodeIndexService;
+import com.repomatch.code.ReadmeService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -23,10 +24,12 @@ public class CodeController {
 
     private final CodeIndexService indexing;
     private final AskService asking;
+    private final ReadmeService readmes;
 
-    public CodeController(CodeIndexService indexing, AskService asking) {
+    public CodeController(CodeIndexService indexing, AskService asking, ReadmeService readmes) {
         this.indexing = indexing;
         this.asking = asking;
+        this.readmes = readmes;
     }
 
     public record Question(@NotBlank @Size(min = 5, max = 1000) String question) {
@@ -46,5 +49,11 @@ public class CodeController {
     @PostMapping("/ask")
     public AskService.Answer ask(@PathVariable long repoId, @Valid @RequestBody Question body, HttpServletRequest http) {
         return asking.ask(repoId, body.question(), http.getRemoteAddr());
+    }
+
+    /** Drafts a README from the indexed code — nothing is pushed to GitHub, the user copies it. */
+    @PostMapping("/readme")
+    public ReadmeService.Draft readme(@PathVariable long repoId, HttpServletRequest http) {
+        return readmes.draft(repoId, http.getRemoteAddr());
     }
 }

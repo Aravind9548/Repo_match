@@ -168,6 +168,18 @@ export type CodeAnswer = {
   usage: TokenUsage | null;
 };
 
+export type ReadmeDraft = {
+  repoId: number;
+  repo: string;
+  markdown: string;
+  /** True when the repo already has a README — the draft would replace it. */
+  hadReadme: boolean;
+  filesUsed: number;
+  sources: string[];
+  llmModel: string | null;
+  usage: TokenUsage | null;
+};
+
 /** RFC 7807 problem document returned by the backend on errors. */
 export type Problem = {
   status: number;
@@ -240,6 +252,8 @@ export const getIndexStatus = (repoId: number) => request<IndexSummary>(`/api/re
 export const indexRepo = (repoId: number, force = false) =>
   post<IndexSummary>(`/api/repos/${repoId}/index?force=${force}`, {});
 export const askRepo = (repoId: number, question: string) => post<CodeAnswer>(`/api/repos/${repoId}/ask`, { question });
+/** Drafts a README from the indexed code. Paid step — only call on an explicit click. */
+export const draftReadme = (repoId: number) => post<ReadmeDraft>(`/api/repos/${repoId}/readme`, {});
 
 /** GitHub's generated social-preview card for a repo ("owner/name"). */
 export const repoImageUrl = (fullName: string) => `https://opengraph.githubassets.com/1/${fullName}`;

@@ -41,8 +41,15 @@ public class AskService {
     }
 
     public record Answer(long repoId, String repo, String question, String answer, boolean answered,
-                         List<Source> citations, List<Source> searched, String llmModel,
-                         ExplainResponse.Usage usage) {
+                         List<Source> citations, List<Source> searched, String llmModel, Usage usage) {
+    }
+
+    /** Token counts in this API's camelCase shape (the AI service speaks snake_case). */
+    public record Usage(int promptTokens, int outputTokens, int thinkingTokens) {
+
+        static Usage of(ExplainResponse.Usage u) {
+            return u == null ? null : new Usage(u.promptTokens(), u.outputTokens(), u.thinkingTokens());
+        }
     }
 
     public Answer ask(long repoId, String question, String clientKey) {
@@ -72,7 +79,7 @@ public class AskService {
                 .toList();
 
         return new Answer(repoId, repo.getFullName(), question.strip(), response.answer(), response.answered(),
-                citations, searched, response.llmModel(), response.usage());
+                citations, searched, response.llmModel(), Usage.of(response.usage()));
     }
 
     /** Attaches the indexed text behind a citation so the UI can show it without another fetch. */

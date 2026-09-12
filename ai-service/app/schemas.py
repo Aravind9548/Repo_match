@@ -96,6 +96,20 @@ class Citation(BaseModel):
     end_line: int
 
 
+class ReadmeRequest(BaseModel):
+    repo: str
+    description: str | None = None
+    languages: list[str] = []
+    chunks: list[CodeChunk] = Field(min_length=1, max_length=40)
+
+
+class ReadmeResponse(BaseModel):
+    llm_model: str
+    markdown: str
+    files_used: int = 0
+    usage: TokenUsage | None = None
+
+
 class AnswerResponse(BaseModel):
     llm_model: str
     answer: str

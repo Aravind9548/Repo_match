@@ -8,6 +8,7 @@ from google.genai import errors as genai_errors
 
 from app.answerer import Answerer, GeminiAnswerer
 from app.config import get_settings
+from app.drafts import GeminiReadmeDrafter, ReadmeDrafter
 from app.embeddings import Embedder, GeminiEmbedder
 from app.explainer import Explainer, GeminiExplainer
 from app.gemini import build_clients
@@ -22,6 +23,8 @@ from app.schemas import (
     RankedRepo,
     RankRequest,
     RankResponse,
+    ReadmeRequest,
+    ReadmeResponse,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -48,6 +51,11 @@ def get_explainer() -> Explainer:
 def get_answerer() -> Answerer:
     s = get_settings()
     return GeminiAnswerer(_clients().llm, s.llm_model, s.llm_temperature)
+
+
+def get_readme_drafter() -> ReadmeDrafter:
+    s = get_settings()
+    return GeminiReadmeDrafter(_clients().llm, s.llm_model, s.llm_temperature)
 
 
 def _upstream_error(e: Exception) -> HTTPException:
@@ -118,6 +126,15 @@ async def answer(req: AnswerRequest, answerer: Answerer = Depends(get_answerer))
     """Answers a question about a repository from retrieved code chunks, with verified citations."""
     try:
         return await answerer.answer(req.repo, req.question, req.chunks)
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
+
+
+@app.post("/readme", response_model=ReadmeResponse)
+async def readme(req: ReadmeRequest, drafter: ReadmeDrafter = Depends(get_readme_drafter)) -> ReadmeResponse:
+    """Drafts a README from the repository's own source — nothing invented."""
+    try:
+        return await drafter.draft(req.repo, req.description, req.languages, req.chunks)
     except _UPSTREAM_ERRORS as e:
         raise _upstream_error(e) from e
 

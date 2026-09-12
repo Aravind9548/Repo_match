@@ -5,11 +5,13 @@ import {
   ApiError,
   askRepo,
   describeError,
+  draftReadme,
   getIndexStatus,
   indexRepo,
   listRepos,
   type CodeAnswer,
   type IndexSummary,
+  type ReadmeDraft,
   type RepoSummary,
 } from "@/lib/api";
 
@@ -31,7 +33,9 @@ export function AskConsole({ initialUsername = "" }: { initialUsername?: string 
   const [index, setIndex] = useState<IndexSummary | null>(null);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<CodeAnswer | null>(null);
-  const [busy, setBusy] = useState<"repos" | "index" | "ask" | null>(null);
+  const [readme, setReadme] = useState<ReadmeDraft | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState<"repos" | "index" | "ask" | "readme" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadRepos(e: React.FormEvent) {
@@ -42,6 +46,7 @@ export function AskConsole({ initialUsername = "" }: { initialUsername?: string 
     setSelected(null);
     setIndex(null);
     setAnswer(null);
+    setReadme(null);
     try {
       const res = await listRepos(username.trim());
       setRepos(res.repos.filter((r) => !r.fork));
@@ -55,6 +60,7 @@ export function AskConsole({ initialUsername = "" }: { initialUsername?: string 
   async function pick(repo: RepoSummary) {
     setSelected(repo);
     setAnswer(null);
+    setReadme(null);
     setIndex(null);
     setError(null);
     try {
@@ -89,6 +95,33 @@ export function AskConsole({ initialUsername = "" }: { initialUsername?: string 
       setError(describeError(err));
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function makeReadme() {
+    if (!selected) return;
+    setBusy("readme");
+    setError(null);
+    setReadme(null);
+    setCopied(false);
+    try {
+      setReadme(await draftReadme(selected.id));
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function copyReadme() {
+    if (!readme) return;
+    try {
+      await navigator.clipboard.writeText(readme.markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked (insecure context or denied) — the text is on screen to select by hand.
+      setError("Couldn't reach the clipboard. Select the text above and copy it manually.");
     }
   }
 
@@ -167,9 +200,16 @@ export function AskConsole({ initialUsername = "" }: { initialUsername?: string 
                     : "Not indexed yet"}
                 </p>
               </div>
-              <button type="button" onClick={runIndex} disabled={busy !== null} className="btn btn-ghost">
-                {busy === "index" ? "Reading the code…" : index ? "Re-index" : "Index this repo"}
-              </button>
+              <div className="flex flex-wrap gap-3">
+                {index && (
+                  <button type="button" onClick={makeReadme} disabled={busy !== null} className="btn btn-ghost">
+                    {busy === "readme" ? "Writing…" : "Draft a README"}
+                  </button>
+                )}
+                <button type="button" onClick={runIndex} disabled={busy !== null} className="btn btn-ghost">
+                  {busy === "index" ? "Reading the code…" : index ? "Re-index" : "Index this repo"}
+                </button>
+              </div>
             </div>
 
             {index && (
@@ -218,6 +258,38 @@ export function AskConsole({ initialUsername = "" }: { initialUsername?: string 
               <div role="alert" className="border border-accent/40 bg-accent-soft px-4 py-3 text-sm">
                 {error}
               </div>
+            )}
+
+            {readme && (
+              <article className="border border-line bg-card p-6 sm:p-8">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="label">Drafted README.md</p>
+                    <p className="mt-2 text-sm text-muted">
+                      {readme.hadReadme
+                        ? "This repo already has a README — compare before you replace it."
+                        : `Written from ${readme.filesUsed} files of your own code. Nothing invented.`}
+                    </p>
+                  </div>
+                  <button type="button" onClick={copyReadme} className="btn btn-primary shrink-0">
+                    {copied ? "Copied" : "Copy markdown"}
+                  </button>
+                </div>
+
+                <pre className="mt-6 max-h-[520px] overflow-auto border border-line bg-paper px-4 py-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap text-body">
+                  {readme.markdown}
+                </pre>
+
+                <footer className="mt-6 flex flex-wrap gap-x-6 gap-y-2 border-t border-line pt-5">
+                  <span className="label">{readme.llmModel ?? "Gemini"}</span>
+                  <span className="label">read: {readme.sources.slice(0, 4).join(" · ")}</span>
+                  {readme.usage && (
+                    <span className="label">
+                      {readme.usage.promptTokens.toLocaleString()} in / {readme.usage.outputTokens.toLocaleString()} out
+                    </span>
+                  )}
+                </footer>
+              </article>
             )}
 
             {answer && (

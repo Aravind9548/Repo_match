@@ -17,6 +17,8 @@ import com.repomatch.ai.dto.ExplainRequest;
 import com.repomatch.ai.dto.ExplainResponse;
 import com.repomatch.ai.dto.RankRequest;
 import com.repomatch.ai.dto.RankResponse;
+import com.repomatch.ai.dto.ReadmeRequest;
+import com.repomatch.ai.dto.ReadmeResponse;
 
 /** HTTP client for the Python AI service (embeddings, ranking, LLM explanations). */
 @Component
@@ -46,6 +48,11 @@ public class AiServiceClient {
     /** Answers a question from retrieved code chunks, with citations verified against them. */
     public AnswerResponse answer(AnswerRequest request) {
         return post("/answer", request, AnswerResponse.class);
+    }
+
+    /** Drafts a README from the repository's own indexed source. */
+    public ReadmeResponse readme(ReadmeRequest request) {
+        return post("/readme", request, ReadmeResponse.class);
     }
 
     private <T> T post(String path, Object body, Class<T> type) {

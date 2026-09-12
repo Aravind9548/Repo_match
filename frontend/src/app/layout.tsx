@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
+import { ScrollProgress } from "@/components/Reveal";
 import "./globals.css";
 
 const archivo = Archivo({ variable: "--font-archivo", subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${archivo.variable} ${jetbrains.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        <ScrollProgress />
         <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur">
           <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-6 px-5 sm:px-10">
             <Link href="/" className="flex items-center gap-3">
