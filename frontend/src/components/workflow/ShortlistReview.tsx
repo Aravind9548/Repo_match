@@ -42,7 +42,7 @@ export function ShortlistReview({
           <h2 id="shortlist-title" className="font-display text-2xl font-semibold">
             Who gets a closer look?
           </h2>
-          <p className="mt-1 max-w-2xl font-hand text-xl text-muted">
+          <p className="mt-3 max-w-2xl text-sm text-muted">
             Gemini will read the README of every repo you tick — thin ones start unticked, but trust your gut
           </p>
         </div>

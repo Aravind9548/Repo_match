@@ -1,0 +1,133 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #06080f; color: #eef2f8; font-family: Sora, "Helvetica Neue", Arial, sans-serif; }
+    a { color: #8fb0ff; text-decoration: none; } a:hover { color: #ffffff; }
+    .label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b97ad; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    .pill { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 999px; padding: 12px 24px; display: inline-flex; align-items: center; gap: 10px; }
+    .card { border: 1px solid rgba(255,255,255,0.08); background: #0b101c; padding: 30px 32px 32px; position: relative; }
+    .chip { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; border: 1px solid rgba(42,91,255,0.45); color: #8fb0ff; padding: 5px 11px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #06080f;">
+
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="#2a5bff" stroke-width="1.4"><rect x="1" y="1" width="20" height="20" rx="5"></rect><circle cx="8" cy="8" r="2.2"></circle><circle cx="14" cy="14" r="2.2"></circle><path d="M9.6 9.6 12.4 12.4" stroke="#eef2f8"></path></svg>
+      <span style="font-size: 15px;">RepoMatch</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <span class="label" style="border: 1px solid rgba(255,255,255,0.14); padding: 8px 14px;">Copy link</span>
+      <span class="label" style="border: 1px solid rgba(255,255,255,0.14); padding: 8px 14px;">New match</span>
+    </div>
+  </div>
+
+  <div style="padding: 56px 40px 0; display: flex; align-items: flex-end; justify-content: space-between;">
+    <div>
+      <div class="label">Result · 12 Sept 2026 · 24 repos considered</div>
+      <h1 style="margin: 18px 0 0; font-weight: 200; font-size: 46px; letter-spacing: -0.025em;">Five projects for this role</h1>
+      <p style="margin: 12px 0 0; font-weight: 300; font-size: 16px; color: #8b97ad;">Autodesk — Intern, Software Development Engineer · Java, Spring Boot, AWS, AI-driven development</p>
+    </div>
+    <span class="label" style="border: 1px solid rgba(255,255,255,0.14); padding: 9px 15px;">Read the job description</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 40px 40px 0;">
+
+    <div class="card">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+        <div>
+          <span class="mono" style="font-size: 12px; color: #6d7a90;">01</span>
+          <h3 style="margin: 8px 0 0; font-weight: 300; font-size: 24px;">Self_heal</h3>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 200; font-size: 42px; line-height: 1; color: #2a5bff;">89</div>
+          <div class="label" style="margin-top: 6px;">match</div>
+        </div>
+      </div>
+      <div style="height: 2px; background: rgba(255,255,255,0.1); margin: 20px 0 22px;"><div style="width: 89%; height: 2px; background: #2a5bff;"></div></div>
+      <p style="margin: 0; font-weight: 300; font-size: 15.5px; line-height: 1.75; color: #dfe6f1;">
+        An autonomous agent that watches a running three-service cluster, diagnoses failures and applies fixes — the
+        clearest evidence of the AI-driven development this role asks for.
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;">
+        <span class="chip">AI-driven development</span><span class="chip">Python</span><span class="chip">problem solving</span>
+      </div>
+      <div style="margin-top: 22px; border-left: 1px solid #2a5bff; padding-left: 16px;">
+        <div class="label" style="margin-bottom: 8px;">From the repo</div>
+        <div class="mono" style="font-size: 12.5px; line-height: 1.95; color: #c7d0de;">
+          “self-prompting diagnostic loop”<br>“Gemini via Vertex”
+        </div>
+      </div>
+      <div style="display: flex; gap: 18px; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <span class="label">Python · JavaScript · HTML</span><span class="label">fit 95/100</span><span class="label">similarity 0.61</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; align-items: flex-start; justify-content: space-between;">
+        <div>
+          <span class="mono" style="font-size: 12px; color: #6d7a90;">02</span>
+          <h3 style="margin: 8px 0 0; font-weight: 300; font-size: 24px;">AI_DUE_AGENT</h3>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 200; font-size: 42px; line-height: 1; color: #2a5bff;">87</div>
+          <div class="label" style="margin-top: 6px;">match</div>
+        </div>
+      </div>
+      <div style="height: 2px; background: rgba(255,255,255,0.1); margin: 20px 0 22px;"><div style="width: 87%; height: 2px; background: #2a5bff;"></div></div>
+      <p style="margin: 0; font-weight: 300; font-size: 15.5px; line-height: 1.75; color: #dfe6f1;">
+        A retrieval pipeline with dense vector search and an orchestrated agent loop — directly relevant to the AI and
+        search work in the posting.
+      </p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;">
+        <span class="chip">AI/ML</span><span class="chip">Search</span><span class="chip">Python</span>
+      </div>
+      <div style="margin-top: 22px; border-left: 1px solid #2a5bff; padding-left: 16px;">
+        <div class="label" style="margin-bottom: 8px;">From the repo</div>
+        <div class="mono" style="font-size: 12.5px; line-height: 1.95; color: #c7d0de;">
+          “custom high-performance RAG pipeline”<br>“Dense Vector Search”
+        </div>
+      </div>
+      <div style="display: flex; gap: 18px; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <span class="label">Python · CSS · HTML</span><span class="label">fit 98/100</span><span class="label">similarity 0.59</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- rest of ranking -->
+  <div style="margin: 40px 40px 0; border: 1px solid rgba(255,255,255,0.08);">
+    <div style="padding: 16px 26px; border-bottom: 1px solid rgba(255,255,255,0.08); background: #080c16;">
+      <span class="label">Also ranked — 19 more</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; padding: 14px 26px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <span style="font-weight: 300;"><span class="mono" style="color: #6d7a90; margin-right: 16px;">06</span>cc_research_pro</span><span class="mono" style="font-size: 13px; color: #8b97ad;">0.60</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; padding: 14px 26px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+      <span style="font-weight: 300;"><span class="mono" style="color: #6d7a90; margin-right: 16px;">07</span>GroupWatch</span><span class="mono" style="font-size: 13px; color: #8b97ad;">0.59</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; padding: 14px 26px;">
+      <span style="font-weight: 300;"><span class="mono" style="color: #6d7a90; margin-right: 16px;">08</span>Btp_Saga</span><span class="mono" style="font-size: 13px; color: #8b97ad;">0.55</span>
+    </div>
+  </div>
+
+  <div style="padding: 40px 40px 72px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; gap: 12px;">
+      <span class="pill" style="background: #2a5bff; color: #ffffff;">Draft resume bullets</span>
+      <span class="pill" style="border: 1px solid rgba(255,255,255,0.25);">Try another job</span>
+    </div>
+    <span class="label">gemini-3.1-pro · 9.2k in / 5.0k out</span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

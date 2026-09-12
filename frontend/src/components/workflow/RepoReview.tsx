@@ -33,7 +33,7 @@ export function RepoReview({
           <h2 id="pick-title" className="font-display text-2xl font-semibold">
             Which repos should count?
           </h2>
-          <p className="mt-1 font-hand text-xl text-muted">
+          <p className="mt-3 max-w-xl text-sm text-muted">
             untick coursework, experiments — anything you wouldn&apos;t show a recruiter
           </p>
         </div>
@@ -57,7 +57,7 @@ export function RepoReview({
             <li key={repo.id}>
               <label
                 className={`group block h-full cursor-pointer overflow-hidden rounded-2xl border bg-card transition ${
-                  on ? "border-accent shadow-glow-accent ring-1 ring-accent" : "border-line opacity-60 hover:opacity-100"
+                  on ? "border-accent ring-1 ring-accent/60" : "border-line opacity-55 hover:opacity-100"
                 }`}
               >
                 <div className="relative aspect-[2/1] overflow-hidden border-b border-line bg-sunken">
@@ -120,7 +120,7 @@ export function RepoReview({
         summary={
           <>
             <strong className="text-ink">{selected.size}</strong> of {repos.length} repos selected ·{" "}
-            <span className="font-hand text-lg">ranking is free</span>
+            <span className="label">ranking is free</span>
           </>
         }
       >

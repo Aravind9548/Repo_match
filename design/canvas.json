@@ -1,0 +1,42 @@
+{
+  "pages": [
+    { "id": "site", "name": "Site" },
+    { "id": "app", "name": "App screens" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 2620, "title": "Home", "page": "site" },
+    { "file": "HowItWorks.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1740, "title": "How it works", "page": "site" },
+    { "file": "Features.dc.html", "x": 3120, "y": 0, "w": 1440, "h": 1800, "title": "Features", "page": "site" },
+    { "file": "AskCodebase.dc.html", "x": 4680, "y": 0, "w": 1440, "h": 1720, "title": "Ask your codebase", "page": "site" },
+    { "file": "About.dc.html", "x": 6240, "y": 0, "w": 1440, "h": 1320, "title": "About", "page": "site" },
+    { "file": "AppWorkflow.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1340, "title": "App — shortlist gate", "page": "app" },
+    { "file": "AppResults.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1560, "title": "App — results", "page": "app" }
+  ],
+  "annotations": [
+    {
+      "id": "direction",
+      "x": 0,
+      "y": -190,
+      "w": 520,
+      "text": "Direction: near-black base, one deep-blue accent, light-weight Sora headlines, IBM Plex Mono for the tiny uppercase labels. Dashed annotation lines and corner ticks give the technical feel from Sharplink/Avionix.",
+      "page": "site"
+    },
+    {
+      "id": "open-questions",
+      "x": 4680,
+      "y": -190,
+      "w": 520,
+      "text": "Ask your codebase is a NEW page — nothing is built yet. The Q&A shown is a mock of how answers would cite real files. Say if you want it narrower (interview prep only) or broader (any repo, any question).",
+      "page": "site"
+    },
+    {
+      "id": "app-note",
+      "x": 0,
+      "y": -170,
+      "w": 520,
+      "text": "App screens in the same language: the pipeline becomes a thin rail across the top instead of a card, so the work gets the space.",
+      "page": "app"
+    }
+  ],
+  "launch": { "view": "canvas", "page": "site" }
+}

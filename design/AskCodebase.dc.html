@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #06080f; color: #eef2f8; font-family: Sora, "Helvetica Neue", Arial, sans-serif; }
+    a { color: #8fb0ff; text-decoration: none; } a:hover { color: #ffffff; }
+    .label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b97ad; }
+    .pill { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 999px; padding: 13px 26px; display: inline-flex; align-items: center; gap: 10px; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #06080f;">
+
+  <div style="padding: 84px 72px 0;">
+    <div class="label" style="color: #2a5bff;">New · Ask your codebase</div>
+    <h1 style="margin: 20px 0 0; font-weight: 200; font-size: 62px; line-height: 1.05; letter-spacing: -0.03em; max-width: 900px;">
+      Interviewers ask how it works.<br><span style="color: #8b97ad;">Now your repo answers.</span>
+    </h1>
+    <p style="margin: 24px 0 0; max-width: 580px; font-weight: 300; font-size: 17px; line-height: 1.7; color: #8b97ad;">
+      Point RepoMatch at one repository and ask anything about it. Answers cite the files they came from, so you can
+      check them — and walk into the room able to explain your own code.
+    </p>
+  </div>
+
+  <!-- console mock -->
+  <div style="margin: 56px 72px 0; border: 1px solid rgba(255,255,255,0.1); background: #080c16;">
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <span class="mono" style="font-size: 13px; color: #c7d0de;">Aravind9548 / Self_heal</span>
+      <span class="label">148 files indexed · 12s</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 420px;">
+      <div style="padding: 34px 32px 40px; border-right: 1px solid rgba(255,255,255,0.08);">
+
+        <div style="display: flex; gap: 14px;">
+          <span class="label" style="color: #2a5bff; padding-top: 4px;">You</span>
+          <p style="margin: 0; font-size: 17px; font-weight: 300;">How does the agent decide a service is unhealthy?</p>
+        </div>
+
+        <div style="display: flex; gap: 14px; margin-top: 30px;">
+          <span class="label" style="padding-top: 4px;">Repo</span>
+          <div>
+            <p style="margin: 0; font-size: 16px; font-weight: 300; line-height: 1.75; color: #dfe6f1;">
+              A watcher polls each service's <span class="mono" style="color: #8fb0ff;">/health</span> endpoint every five
+              seconds. Three consecutive failures, or a latency above the configured ceiling, mark the service degraded and
+              wake the diagnostic loop — which then reads the container logs before proposing a fix.
+            </p>
+            <div style="margin-top: 22px; display: grid; gap: 10px;">
+              <div style="border: 1px solid rgba(255,255,255,0.1); background: #06080f; padding: 14px 16px;">
+                <div class="label" style="color: #2a5bff;">watcher/monitor.py · lines 41-58</div>
+                <div class="mono" style="margin-top: 10px; font-size: 12.5px; line-height: 1.9; color: #c7d0de;">
+                  if failures &gt;= THRESHOLD or p95 &gt; MAX_LATENCY:<br>
+                  &nbsp;&nbsp;&nbsp;&nbsp;self.mark_degraded(service)
+                </div>
+              </div>
+              <div style="border: 1px solid rgba(255,255,255,0.1); background: #06080f; padding: 14px 16px;">
+                <div class="label" style="color: #2a5bff;">agent/diagnose.py · lines 12-27</div>
+                <div class="mono" style="margin-top: 10px; font-size: 12.5px; line-height: 1.9; color: #c7d0de;">
+                  logs = docker.logs(container, tail=200)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 36px; border: 1px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: space-between; padding: 16px 18px;">
+          <span class="mono" style="font-size: 14px; color: #6d7a90;">Ask another question…</span>
+          <span class="pill" style="background: #2a5bff; color: #ffffff; padding: 9px 18px;">Ask</span>
+        </div>
+      </div>
+
+      <div style="padding: 34px 32px;">
+        <div class="label">Suggested</div>
+        <div style="display: grid; gap: 10px; margin-top: 18px;">
+          <div style="border: 1px solid rgba(255,255,255,0.1); padding: 13px 15px; font-size: 14px; font-weight: 300; color: #c7d0de;">What would you show in a demo?</div>
+          <div style="border: 1px solid rgba(255,255,255,0.1); padding: 13px 15px; font-size: 14px; font-weight: 300; color: #c7d0de;">Where is state kept between runs?</div>
+          <div style="border: 1px solid rgba(255,255,255,0.1); padding: 13px 15px; font-size: 14px; font-weight: 300; color: #c7d0de;">What's the weakest part of this design?</div>
+          <div style="border: 1px solid rgba(255,255,255,0.1); padding: 13px 15px; font-size: 14px; font-weight: 300; color: #c7d0de;">Which tests cover the retry logic?</div>
+        </div>
+
+        <div class="label" style="margin-top: 34px;">Indexed</div>
+        <div style="margin-top: 16px; display: grid; gap: 9px;">
+          <div style="display: flex; justify-content: space-between;"><span class="mono" style="font-size: 12.5px; color: #c7d0de;">watcher/</span><span class="label">24 files</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="mono" style="font-size: 12.5px; color: #c7d0de;">agent/</span><span class="label">31 files</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="mono" style="font-size: 12.5px; color: #c7d0de;">services/</span><span class="label">62 files</span></div>
+          <div style="display: flex; justify-content: space-between;"><span class="mono" style="font-size: 12.5px; color: #c7d0de;">tests/</span><span class="label">31 files</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- three notes -->
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; padding: 72px 72px 0;">
+    <div>
+      <div class="label">Same rule as matching</div>
+      <h3 style="margin: 14px 0 0; font-weight: 300; font-size: 22px;">Cites or stays quiet</h3>
+      <p style="margin: 12px 0 0; font-weight: 300; font-size: 15px; line-height: 1.7; color: #8b97ad;">
+        Every claim points at a file and line range. If the code doesn't say it, the answer says it doesn't know.
+      </p>
+    </div>
+    <div>
+      <div class="label">Before the interview</div>
+      <h3 style="margin: 14px 0 0; font-weight: 300; font-size: 22px;">Rehearse the hard questions</h3>
+      <p style="margin: 12px 0 0; font-weight: 300; font-size: 15px; line-height: 1.7; color: #8b97ad;">
+        Ask what you'd be asked about a project you wrote months ago, and get the tour before you're on the spot.
+      </p>
+    </div>
+    <div>
+      <div class="label">Cost</div>
+      <h3 style="margin: 14px 0 0; font-weight: 300; font-size: 22px;">Indexed once, then cheap</h3>
+      <p style="margin: 12px 0 0; font-weight: 300; font-size: 15px; line-height: 1.7; color: #8b97ad;">
+        A repository is indexed on first use and cached. Questions after that cost a few cents each.
+      </p>
+    </div>
+  </div>
+
+  <div style="padding: 84px 72px 96px;">
+    <div style="border: 1px solid rgba(255,255,255,0.08); background: #0b101c; padding: 40px 44px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-weight: 200; font-size: 30px;">Pick a repo and ask it something.</div>
+      <span class="pill" style="background: #2a5bff; color: #ffffff;">Open the console</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

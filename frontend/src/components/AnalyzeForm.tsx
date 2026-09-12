@@ -150,12 +150,12 @@ export function AnalyzeForm({
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 font-semibold text-on-accent shadow-glow-accent transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
+          className="btn btn-primary disabled:cursor-wait disabled:opacity-70"
         >
           {pending ? "Fetching your repos…" : "Start — fetch my repos"}
           {!pending && <ArrowRightIcon className="size-4" />}
         </button>
-        <p className="font-hand text-lg text-muted">nothing paid happens without your OK</p>
+        <p className="label">Nothing paid runs without your approval</p>
       </div>
     </form>
   );

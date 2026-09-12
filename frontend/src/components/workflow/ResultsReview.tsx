@@ -39,7 +39,7 @@ export function ResultsReview({
           <h2 id="results-title" className="font-display text-2xl font-semibold">
             Gemini&apos;s verdict — your call
           </h2>
-          <p className="mt-1 font-hand text-xl text-muted">keep the ones you&apos;d actually talk about in an interview</p>
+          <p className="mt-3 text-sm text-muted">Keep the ones you&apos;d actually talk about in an interview.</p>
         </div>
         <TextButton onClick={onBack} disabled={busy}>
           ← Edit shortlist (re-runs Gemini)

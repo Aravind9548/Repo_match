@@ -10,7 +10,7 @@ export function AnalyzeExperience({ initialUsername }: { initialUsername: string
   return (
     <div className="space-y-10">
       <WorkflowCanvas statuses={statusesFor(null, pending ? "fetch" : null)} />
-      <div className="max-w-2xl rounded-3xl border border-line bg-card/90 p-5 shadow-glow sm:p-8">
+      <div className="max-w-2xl border border-line bg-card p-6 sm:p-8">
         <AnalyzeForm initialUsername={initialUsername} onPendingChange={setPending} />
       </div>
     </div>

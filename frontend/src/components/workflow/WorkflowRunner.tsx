@@ -66,7 +66,7 @@ export function WorkflowRunner({ initial }: { initial: Workflow }) {
           />
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-hand text-lg text-accent">matching {login ?? "your"} repos to a job</p>
+          <p className="label text-accent">Matching {login ?? "your"} repos to a job</p>
           <details className="group">
             <summary className="cursor-pointer list-none font-display text-2xl font-semibold leading-snug sm:text-3xl">
               <span className="line-clamp-1 group-open:line-clamp-none">{wf.jobDescription.split("\n")[0]}</span>

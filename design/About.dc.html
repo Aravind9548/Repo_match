@@ -1,0 +1,86 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #06080f; color: #eef2f8; font-family: Sora, "Helvetica Neue", Arial, sans-serif; }
+    a { color: #8fb0ff; text-decoration: none; } a:hover { color: #ffffff; }
+    .label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b97ad; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    .pill { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 999px; padding: 13px 26px; display: inline-flex; align-items: center; gap: 10px; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #06080f;">
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 72px; padding: 84px 72px 0;">
+    <div>
+      <div class="label">About</div>
+      <h1 style="margin: 20px 0 0; font-weight: 200; font-size: 56px; line-height: 1.06; letter-spacing: -0.03em;">
+        Built because<br>tailoring a resume<br><span style="color: #8b97ad;">is weekly work.</span>
+      </h1>
+      <p style="margin: 26px 0 0; font-weight: 300; font-size: 17px; line-height: 1.75; color: #aeb9cc;">
+        Every posting wants a different half of what you've built. Picking which three projects to show, and writing why
+        they matter, took an hour each time — and the answer was always already in the repositories.
+      </p>
+      <p style="margin: 18px 0 0; font-weight: 300; font-size: 17px; line-height: 1.75; color: #8b97ad;">
+        RepoMatch does the reading and the ranking. The judgement stays with the person applying, because a model that
+        never opened the pull request shouldn't get the last word on your work.
+      </p>
+    </div>
+
+    <div style="border: 1px solid rgba(255,255,255,0.08); background: #0b101c; padding: 40px 38px;">
+      <div class="label">How it's put together</div>
+      <div style="margin-top: 26px; display: grid; gap: 18px;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 14px;">
+          <span style="font-weight: 300;">API &amp; orchestration</span><span class="mono" style="font-size: 13px; color: #8fb0ff;">Spring Boot · Java 21</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 14px;">
+          <span style="font-weight: 300;">Embeddings &amp; reasoning</span><span class="mono" style="font-size: 13px; color: #8fb0ff;">FastAPI · Gemini</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 14px;">
+          <span style="font-weight: 300;">Storage</span><span class="mono" style="font-size: 13px; color: #8fb0ff;">PostgreSQL</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.07); padding-bottom: 14px;">
+          <span style="font-weight: 300;">Interface</span><span class="mono" style="font-size: 13px; color: #8fb0ff;">Next.js · TypeScript</span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span style="font-weight: 300;">Running on</span><span class="mono" style="font-size: 13px; color: #8fb0ff;">Cloud Run · Vercel</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 34px; padding-top: 26px; border-top: 1px solid rgba(255,255,255,0.07);">
+        <div class="label">Principles</div>
+        <ul style="margin: 18px 0 0; padding-left: 18px; font-weight: 300; font-size: 15px; line-height: 2; color: #aeb9cc;">
+          <li>The costly step waits for a human.</li>
+          <li>Claims carry quotes, or they're cut.</li>
+          <li>Nothing is re-read that hasn't changed.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin: 72px 72px 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 48px; display: flex; align-items: center; justify-content: space-between;">
+    <div>
+      <div class="label">Made by</div>
+      <div style="margin-top: 10px; font-weight: 200; font-size: 30px;">Aravind — <span class="mono" style="font-size: 18px; color: #8fb0ff;">github.com/Aravind9548</span></div>
+    </div>
+    <span class="pill" style="border: 1px solid rgba(255,255,255,0.25);">Get in touch</span>
+  </div>
+
+  <div style="padding: 72px 72px 96px;">
+    <div style="border: 1px solid rgba(255,255,255,0.08); background: #0b101c; padding: 40px 44px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-weight: 200; font-size: 30px;">Try it on the job you're applying to tonight.</div>
+      <span class="pill" style="background: #2a5bff; color: #ffffff;">Start a match</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -69,9 +69,9 @@ function boxClass(node: CanvasNode, status: NodeStatus) {
     case "done":
       return `${shape} ${node.kind === "review" ? "border-accent bg-accent text-on-accent" : "border-blue bg-blue text-white"}`;
     case "current":
-      return `${shape} scale-110 border-accent bg-card text-accent shadow-glow-accent`;
+      return `${shape} scale-110 border-accent bg-card text-accent ring-2 ring-accent/40`;
     case "running":
-      return `${shape} scale-110 border-blue bg-card text-blue shadow-glow`;
+      return `${shape} scale-110 border-blue bg-card text-blue ring-2 ring-blue/40`;
     case "pending":
       return `${shape} border-line bg-card text-muted`;
     case "future":
@@ -172,7 +172,7 @@ export function WorkflowCanvas({
                 <NodeShell label={node.label} onClick={back ? () => onGoBack!(node.gate!) : undefined}>
                   <div
                     className={`relative flex size-14 items-center justify-center border-2 transition duration-300 ${boxClass(node, s)} ${
-                      back ? "group-hover:-translate-y-1 group-hover:shadow-glow-accent" : ""
+                      back ? "group-hover:-translate-y-1 group-hover:ring-2 ring-accent/40" : ""
                     }`}
                   >
                     {live && (
@@ -216,7 +216,7 @@ export function WorkflowCanvas({
                   <span className={`mt-2.5 text-xs font-semibold leading-tight ${live ? "text-ink" : s === "done" ? "text-ink/80" : "text-muted"}`}>
                     {node.label}
                   </span>
-                  <span className={`font-hand text-[15px] leading-tight ${live || back ? "text-accent" : "text-muted"}`}>
+                  <span className={`font-mono text-[10px] uppercase leading-tight tracking-wider ${live || back ? "text-accent" : "text-muted"}`}>
                     {back ? (
                       <>
                         <span className="group-hover:hidden">{node.note}</span>

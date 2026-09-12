@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@200;300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    body { margin: 0; background: #06080f; color: #eef2f8; font-family: Sora, "Helvetica Neue", Arial, sans-serif; }
+    a { color: #8fb0ff; text-decoration: none; } a:hover { color: #ffffff; }
+    .label { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #8b97ad; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    .pill { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; border-radius: 999px; padding: 12px 24px; display: inline-flex; align-items: center; gap: 10px; }
+    .row { display: flex; align-items: center; gap: 20px; padding: 15px 24px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .box { width: 18px; height: 18px; border: 1px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; flex: none; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; background: #06080f;">
+
+  <!-- app bar -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 18px 40px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="#2a5bff" stroke-width="1.4"><rect x="1" y="1" width="20" height="20" rx="5"></rect><circle cx="8" cy="8" r="2.2"></circle><circle cx="14" cy="14" r="2.2"></circle><path d="M9.6 9.6 12.4 12.4" stroke="#eef2f8"></path></svg>
+      <span style="font-size: 15px;">RepoMatch</span>
+      <span class="mono" style="font-size: 12px; color: #6d7a90;">/ run · Autodesk SDE intern</span>
+    </div>
+    <div style="display: flex; gap: 10px;">
+      <span class="label" style="border: 1px solid rgba(255,255,255,0.14); padding: 8px 14px;">History</span>
+      <span class="label" style="border: 1px solid rgba(255,255,255,0.14); padding: 8px 14px;">Aravind9548</span>
+    </div>
+  </div>
+
+  <!-- pipeline rail -->
+  <div style="display: flex; align-items: center; gap: 0; padding: 22px 40px; border-bottom: 1px solid rgba(255,255,255,0.07); background: #080c16;">
+    <span class="label" style="color: #eef2f8; margin-right: 26px;">Step 4 / 7</span>
+
+    <span style="display: flex; align-items: center; gap: 9px; padding-right: 18px;">
+      <span style="width: 9px; height: 9px; background: #8fb0ff;"></span><span class="label">Fetch</span>
+    </span>
+    <span style="width: 26px; height: 1px; background: rgba(255,255,255,0.18);"></span>
+    <span style="display: flex; align-items: center; gap: 9px; padding: 0 18px;">
+      <span style="width: 9px; height: 9px; border-radius: 999px; background: #2a5bff;"></span><span class="label">Pick repos</span>
+    </span>
+    <span style="width: 26px; height: 1px; background: rgba(255,255,255,0.18);"></span>
+    <span style="display: flex; align-items: center; gap: 9px; padding: 0 18px;">
+      <span style="width: 9px; height: 9px; background: #8fb0ff;"></span><span class="label">Rank</span>
+    </span>
+    <span style="width: 26px; height: 1px; background: #2a5bff;"></span>
+    <span style="display: flex; align-items: center; gap: 9px; padding: 0 18px; border: 1px solid #2a5bff;">
+      <span style="width: 9px; height: 9px; border-radius: 999px; background: #2a5bff;"></span>
+      <span class="label" style="color: #eef2f8;">Shortlist — waiting for you</span>
+    </span>
+    <span style="width: 26px; height: 1px; background: rgba(255,255,255,0.18);"></span>
+    <span style="display: flex; align-items: center; gap: 9px; padding: 0 18px;">
+      <span style="width: 9px; height: 9px; background: rgba(255,255,255,0.25);"></span><span class="label">Gemini</span>
+      <span class="label" style="color: #e8b04a; border: 1px solid rgba(232,176,74,0.4); padding: 2px 7px;">paid</span>
+    </span>
+    <span style="width: 26px; height: 1px; background: rgba(255,255,255,0.18);"></span>
+    <span style="display: flex; align-items: center; gap: 9px; padding: 0 18px;">
+      <span style="width: 9px; height: 9px; border-radius: 999px; background: rgba(255,255,255,0.25);"></span><span class="label">Accept</span>
+    </span>
+    <span style="width: 26px; height: 1px; background: rgba(255,255,255,0.18);"></span>
+    <span style="display: flex; align-items: center; gap: 9px; padding-left: 18px;">
+      <span style="width: 9px; height: 9px; background: rgba(255,255,255,0.25);"></span><span class="label">Save</span>
+    </span>
+  </div>
+
+  <div style="padding: 44px 40px 0; display: flex; align-items: flex-end; justify-content: space-between;">
+    <div>
+      <h1 style="margin: 0; font-weight: 200; font-size: 40px; letter-spacing: -0.02em;">Who gets read closely?</h1>
+      <p style="margin: 12px 0 0; font-weight: 300; font-size: 16px; color: #8b97ad;">
+        Gemini reads the README of everything you tick. Thin repos start unticked — override where you disagree.
+      </p>
+    </div>
+    <span class="label" style="border-bottom: 1px solid rgba(255,255,255,0.25); padding-bottom: 4px;">← change repo selection</span>
+  </div>
+
+  <!-- ranked list -->
+  <div style="margin: 32px 40px 0; border: 1px solid rgba(255,255,255,0.08); background: #0b101c;">
+    <div class="row" style="background: #080c16; border-bottom: 1px solid rgba(255,255,255,0.1);">
+      <span class="box" style="border-color: rgba(255,255,255,0.15);"></span>
+      <span class="label" style="width: 34px;">rank</span>
+      <span class="label" style="flex: 1;">repository</span>
+      <span class="label" style="width: 260px;">similarity to this job</span>
+      <span class="label" style="width: 60px; text-align: right;">score</span>
+    </div>
+
+    <div class="row">
+      <span class="box" style="background: #2a5bff; border-color: #2a5bff;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span class="mono" style="width: 34px; color: #6d7a90;">01</span>
+      <span style="flex: 1; display: flex; align-items: center; gap: 12px;"><span style="font-weight: 300; font-size: 16px;">docuflow</span><span class="label" style="color: #e8b04a; border: 1px solid rgba(232,176,74,0.35); padding: 2px 8px;">no readme</span></span>
+      <span style="width: 260px;"><span style="display: block; height: 2px; background: rgba(255,255,255,0.12);"><span style="display: block; width: 100%; height: 2px; background: #8fb0ff;"></span></span></span>
+      <span class="mono" style="width: 60px; text-align: right; font-size: 13px; color: #c7d0de;">0.644</span>
+    </div>
+
+    <div class="row" style="opacity: 0.55;">
+      <span class="box"></span>
+      <span class="mono" style="width: 34px; color: #6d7a90;">02</span>
+      <span style="flex: 1; display: flex; align-items: center; gap: 12px;"><span style="font-weight: 300; font-size: 16px;">ML_Lab_Project</span><span class="label" style="color: #e8b04a; border: 1px solid rgba(232,176,74,0.35); padding: 2px 8px;">no readme</span></span>
+      <span style="width: 260px;"><span style="display: block; height: 2px; background: rgba(255,255,255,0.12);"><span style="display: block; width: 94%; height: 2px; background: #8fb0ff;"></span></span></span>
+      <span class="mono" style="width: 60px; text-align: right; font-size: 13px; color: #c7d0de;">0.641</span>
+    </div>
+
+    <div class="row">
+      <span class="box" style="background: #2a5bff; border-color: #2a5bff;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span class="mono" style="width: 34px; color: #6d7a90;">03</span>
+      <span style="flex: 1; font-weight: 300; font-size: 16px;">CI-CD_Project</span>
+      <span style="width: 260px;"><span style="display: block; height: 2px; background: rgba(255,255,255,0.12);"><span style="display: block; width: 78%; height: 2px; background: #8fb0ff;"></span></span></span>
+      <span class="mono" style="width: 60px; text-align: right; font-size: 13px; color: #c7d0de;">0.632</span>
+    </div>
+
+    <div class="row">
+      <span class="box" style="background: #2a5bff; border-color: #2a5bff;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span class="mono" style="width: 34px; color: #6d7a90;">04</span>
+      <span style="flex: 1; font-weight: 300; font-size: 16px;">Self_heal</span>
+      <span style="width: 260px;"><span style="display: block; height: 2px; background: rgba(255,255,255,0.12);"><span style="display: block; width: 62%; height: 2px; background: #8fb0ff;"></span></span></span>
+      <span class="mono" style="width: 60px; text-align: right; font-size: 13px; color: #c7d0de;">0.610</span>
+    </div>
+
+    <div class="row">
+      <span class="box" style="background: #2a5bff; border-color: #2a5bff;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+      <span class="mono" style="width: 34px; color: #6d7a90;">05</span>
+      <span style="flex: 1; font-weight: 300; font-size: 16px;">Aether_DB</span>
+      <span style="width: 260px;"><span style="display: block; height: 2px; background: rgba(255,255,255,0.12);"><span style="display: block; width: 54%; height: 2px; background: #8fb0ff;"></span></span></span>
+      <span class="mono" style="width: 60px; text-align: right; font-size: 13px; color: #c7d0de;">0.606</span>
+    </div>
+
+    <div class="row" style="opacity: 0.55; border-bottom: 0;">
+      <span class="box"></span>
+      <span class="mono" style="width: 34px; color: #6d7a90;">06</span>
+      <span style="flex: 1; font-weight: 300; font-size: 16px;">Prometheues</span>
+      <span style="width: 260px;"><span style="display: block; height: 2px; background: rgba(255,255,255,0.12);"><span style="display: block; width: 44%; height: 2px; background: #8fb0ff;"></span></span></span>
+      <span class="mono" style="width: 60px; text-align: right; font-size: 13px; color: #c7d0de;">0.605</span>
+    </div>
+  </div>
+
+  <!-- action bar -->
+  <div style="margin: 26px 40px 60px; border: 1px solid rgba(255,255,255,0.12); background: #080c16; padding: 20px 26px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: baseline; gap: 18px;">
+      <span style="font-weight: 300; font-size: 17px;">12 repositories shortlisted</span>
+      <span class="label">estimated $0.08 · one Gemini call</span>
+    </div>
+    <span class="pill" style="background: #2a5bff; color: #ffffff;">Ask Gemini to judge
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 7h10M8 3l4 4-4 4"></path></svg>
+    </span>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
