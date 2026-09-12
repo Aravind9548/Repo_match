@@ -40,6 +40,8 @@ repomatch:
     max-parallel-requests: 8
   ai:
     base-url: ${AI_SERVICE_URL:http://localhost:8000}
+    # On Cloud Run the AI service is private; the backend authenticates with an ID token for this audience.
+    audience: ${AI_SERVICE_AUDIENCE:}
     connect-timeout: 5s
     read-timeout: 180s
   analysis:

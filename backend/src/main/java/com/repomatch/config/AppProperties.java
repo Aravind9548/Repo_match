@@ -18,7 +18,11 @@ public record AppProperties(GitHub github, Ai ai, Analysis analysis, Limits limi
         }
     }
 
-    public record Ai(String baseUrl, Duration connectTimeout, Duration readTimeout) {
+    /** @param audience set on Cloud Run: calls carry an ID token for this audience (the AI service URL). */
+    public record Ai(String baseUrl, Duration connectTimeout, Duration readTimeout, String audience) {
+        public boolean requiresIdToken() {
+            return audience != null && !audience.isBlank();
+        }
     }
 
     /**

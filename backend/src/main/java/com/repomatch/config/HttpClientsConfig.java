@@ -8,6 +8,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import com.repomatch.ai.AiClientAuth;
+
 @Configuration
 public class HttpClientsConfig {
 
@@ -33,9 +35,12 @@ public class HttpClientsConfig {
         var factory = new JdkClientHttpRequestFactory(jdk);
         // LLM explanations can take a while with thinking models.
         factory.setReadTimeout(props.ai().readTimeout());
-        return builder.clone()
+        RestClient.Builder b = builder.clone()
                 .baseUrl(props.ai().baseUrl())
-                .requestFactory(factory)
-                .build();
+                .requestFactory(factory);
+        if (props.ai().requiresIdToken()) {
+            b.requestInterceptor(AiClientAuth.idTokenFor(props.ai().audience()));
+        }
+        return b.build();
     }
 }
