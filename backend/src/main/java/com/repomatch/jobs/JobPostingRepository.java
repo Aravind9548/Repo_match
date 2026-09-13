@@ -13,7 +13,9 @@ import org.springframework.data.repository.query.Param;
 public interface JobPostingRepository extends JpaRepository<JobPostingEntity, Long> {
     List<JobPostingEntity> findByApplyUrlIn(Collection<String> urls);
 
-    List<JobPostingEntity> findByFirstSeenAtGreaterThanEqual(Instant since);
+    /** Open postings listed since a moment: the employer's date when known, else when we first saw it. */
+    @Query("select p from JobPostingEntity p where p.closed = false and coalesce(p.postedAt, p.firstSeenAt) >= :since")
+    List<JobPostingEntity> findOpenListedSince(@Param("since") Instant since);
 
     /** Anything a list stopped showing is gone: closed or filled. */
     @Modifying

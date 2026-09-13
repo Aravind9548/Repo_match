@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     google_application_credentials: str | None = None
 
     llm_model: str = "gemini-3.1-pro-preview"
+    # Grounded web search: a fast model is plenty; the search does the heavy lifting.
+    web_search_model: str = "gemini-2.5-flash"
     embedding_model: str = "gemini-embedding-001"
     embedding_dim: int = 768
     llm_temperature: float = 0.2

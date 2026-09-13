@@ -141,7 +141,7 @@ export function AlertsConsole() {
                 required
               />
             </Field>
-            <Field label="Keywords · any of" hint="Comma separated. Matched against role and company.">
+            <Field label="Keywords · any of" hint="Comma separated. “sde” also finds “software engineer”.">
               <input
                 className={inputClass}
                 value={draft.keywords}
@@ -156,18 +156,18 @@ export function AlertsConsole() {
                 onChange={(e) => setDraft({ ...draft, exclude: e.target.value })}
               />
             </Field>
-            <Field label="Locations · any of" hint="Leave empty for everywhere.">
+            <Field label="Locations · any of" hint="Countries, cities (any spelling) or Remote. Empty = everywhere.">
               <input
                 className={inputClass}
                 value={draft.locations}
                 onChange={(e) => setDraft({ ...draft, locations: e.target.value })}
-                placeholder="Remote, Bangalore, Seattle"
+                placeholder="India, Bangalore, Remote"
               />
             </Field>
             <fieldset>
               <legend className="label">Type</legend>
               <div className="mt-3 flex gap-2">
-                {(["INTERNSHIP", "NEW_GRAD"] as const).map((k) => {
+                {(["INTERNSHIP", "NEW_GRAD", "FULL_TIME"] as const).map((k) => {
                   const on = draft.kinds.includes(k);
                   return (
                     <button
@@ -178,7 +178,7 @@ export function AlertsConsole() {
                         on ? "border-accent bg-accent-soft text-ink" : "border-line text-muted hover:text-ink"
                       }`}
                     >
-                      {k === "INTERNSHIP" ? "Internships" : "New grad"}
+                      {k === "INTERNSHIP" ? "Internships" : k === "NEW_GRAD" ? "New grad" : "Full-time"}
                     </button>
                   );
                 })}

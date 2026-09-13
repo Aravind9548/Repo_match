@@ -43,29 +43,50 @@ public class JobWatchEntity {
     private Instant lastNotifiedAt;
 
     /**
-     * Keywords match the role or company (any one is enough), excluded words veto, locations match any substring,
-     * and "remote" in the locations list also matches postings that say remote anywhere.
+     * Uses the feed's own search rules: each keyword is a search in its own right ("sde" also finds "software
+     * engineer") and any one is enough; excluded words veto; each location is a country, city (with its other
+     * spellings) or "remote", and any one is enough.
      */
     public boolean matches(JobPostingEntity p) {
         if (p.isClosed()) {
             return false;
         }
-        String haystack = (p.getRole() + " " + p.getCompany()).toLowerCase(Locale.ROOT);
-        String where = p.getLocation() == null ? "" : p.getLocation().toLowerCase(Locale.ROOT);
+        String text = p.getSearchText() == null || p.getSearchText().isBlank()
+                ? SearchText.build(p.getCompany(), p.getRole(), p.getLocation(), Places.of(p.getLocation()))
+                : p.getSearchText();
         if (kinds.length > 0 && Arrays.stream(kinds).noneMatch(k -> k.equals(p.getKind().name()))) {
             return false;
         }
-        if (Arrays.stream(excludeKeywords).anyMatch(k -> haystack.contains(lower(k)))) {
+        if (Arrays.stream(excludeKeywords).anyMatch(k -> SearchText.matches(text, java.util.List.of(k)))) {
             return false;
         }
-        if (keywords.length > 0 && Arrays.stream(keywords).noneMatch(k -> haystack.contains(lower(k)))) {
+        if (keywords.length > 0 && Arrays.stream(keywords).noneMatch(k -> keywordMatches(text, k))) {
             return false;
         }
-        return locations.length == 0 || Arrays.stream(locations).anyMatch(l -> where.contains(lower(l)));
+        return locations.length == 0 || Arrays.stream(locations).anyMatch(l -> locationMatches(p, text, l));
     }
 
-    private static String lower(String s) {
-        return s.toLowerCase(Locale.ROOT).strip();
+    /** "backend java" as one keyword means both words; synonyms apply to each. */
+    private static boolean keywordMatches(String text, String keyword) {
+        JobQuery q = JobQuery.parse(keyword, null);
+        if (q.concepts().isEmpty()) {
+            return true; // the keyword was only a kind or place word, which the other filters cover
+        }
+        return q.concepts().stream().allMatch(c -> SearchText.matches(text, c));
+    }
+
+    private static boolean locationMatches(JobPostingEntity p, String text, String location) {
+        Places.Wanted w = Places.wanted(location);
+        if (w == null) {
+            return SearchText.matches(text, java.util.List.of(location));
+        }
+        if (w.remote()) {
+            return p.isRemote();
+        }
+        if (w.country() != null && w.cityAliases().isEmpty()) {
+            return w.country().equals(p.getCountry());
+        }
+        return SearchText.matches(text, w.cityAliases());
     }
 
     public Long getId() { return id; }

@@ -23,6 +23,10 @@ public class JobSourceEntity {
     private String path;
     @Enumerated(EnumType.STRING)
     private JobKind defaultKind;
+    @Enumerated(EnumType.STRING)
+    private SourceType type;
+    private String slug;
+    private String companyName;
     private boolean enabled;
     private Instant lastCheckedAt;
     private int lastCount;
@@ -37,6 +41,12 @@ public class JobSourceEntity {
     public void setPath(String path) { this.path = path; }
     public JobKind getDefaultKind() { return defaultKind; }
     public void setDefaultKind(JobKind defaultKind) { this.defaultKind = defaultKind; }
+    public SourceType getType() { return type; }
+    public void setType(SourceType type) { this.type = type; }
+    public String getSlug() { return slug; }
+    public void setSlug(String slug) { this.slug = slug; }
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
     public Instant getLastCheckedAt() { return lastCheckedAt; }

@@ -19,6 +19,8 @@ import com.repomatch.ai.dto.RankRequest;
 import com.repomatch.ai.dto.RankResponse;
 import com.repomatch.ai.dto.ReadmeRequest;
 import com.repomatch.ai.dto.ReadmeResponse;
+import com.repomatch.ai.dto.WebSearchRequest;
+import com.repomatch.ai.dto.WebSearchResponse;
 
 /** HTTP client for the Python AI service (embeddings, ranking, LLM explanations). */
 @Component
@@ -53,6 +55,11 @@ public class AiServiceClient {
     /** Drafts a README from the repository's own indexed source. */
     public ReadmeResponse readme(ReadmeRequest request) {
         return post("/readme", request, ReadmeResponse.class);
+    }
+
+    /** Finds postings on the open web with Gemini grounded in Google Search. */
+    public WebSearchResponse webSearch(WebSearchRequest request) {
+        return post("/websearch", request, WebSearchResponse.class);
     }
 
     private <T> T post(String path, Object body, Class<T> type) {

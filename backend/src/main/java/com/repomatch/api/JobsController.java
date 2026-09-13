@@ -47,11 +47,13 @@ public class JobsController {
     private final JobWatchService watches;
     private final TrackerService tracker;
     private final OwnerKeys keys;
+    private final com.repomatch.jobs.WebJobSearchService web;
     private final String cronSecret;
     private final AtomicReference<Instant> lastRefresh = new AtomicReference<>(Instant.EPOCH);
 
     public JobsController(JobFeedService feed, JobWatchService watches, TrackerService tracker, OwnerKeys keys,
-                          AppProperties props) {
+                          com.repomatch.jobs.WebJobSearchService web, AppProperties props) {
+        this.web = web;
         this.feed = feed;
         this.watches = watches;
         this.tracker = tracker;
@@ -71,6 +73,16 @@ public class JobsController {
         return feed.search(q, location, kind, sinceDays, offset, limit);
     }
 
+    public record WebSearchBody(@Size(max = 200) String q, @Size(max = 100) String location, JobKind kind) {
+    }
+
+    /** Paid (one grounded Gemini call), so the UI only calls it on an explicit click. */
+    @PostMapping("/api/jobs/web-search")
+    public com.repomatch.jobs.WebJobSearchService.Result webSearch(@Valid @RequestBody WebSearchBody body,
+                                                                   jakarta.servlet.http.HttpServletRequest http) {
+        return web.search(body.q(), body.location(), body.kind(), http.getRemoteAddr());
+    }
+
     public record PostingDetail(JobFeedService.PostingView posting, TrackerService.ApplicationView application) {
     }
 
@@ -82,13 +94,13 @@ public class JobsController {
         return new PostingDetail(posting, app);
     }
 
-    public record SourceView(String fullName, String branch, boolean enabled, Instant lastCheckedAt, int lastCount,
-                             String lastError) {
+    public record SourceView(String fullName, com.repomatch.jobs.SourceType type, String companyName, String branch,
+                             boolean enabled, Instant lastCheckedAt, int lastCount, String lastError) {
     }
 
     @GetMapping("/api/jobs/sources")
     public List<SourceView> sources() {
-        return feed.sources().stream().map(s -> new SourceView(s.getFullName(), s.getBranch(), s.isEnabled(),
+        return feed.sources().stream().map(s -> new SourceView(s.getFullName(), s.getType(), s.getCompanyName(), s.getBranch(), s.isEnabled(),
                 s.getLastCheckedAt(), s.getLastCount(), s.getLastError())).toList();
     }
 

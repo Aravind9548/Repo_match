@@ -22,7 +22,7 @@ import com.repomatch.notify.Mailer;
 public class JobWatchService {
 
     /** A new watch shows what's already out there from this far back, in the app only (no email flood). */
-    static final Duration BACKFILL = Duration.ofDays(7);
+    static final Duration BACKFILL = Duration.ofDays(14);
     static final int MAX_BACKFILL = 60;
     static final int MAX_WATCHES_PER_OWNER = 10;
     static final int MAX_ITEMS_PER_EMAIL = 25;
@@ -70,9 +70,9 @@ public class JobWatchService {
 
         // Backfill so a brand-new alert isn't an empty page.
         Instant since = Instant.now().minus(BACKFILL);
-        postings.findByFirstSeenAtGreaterThanEqual(since).stream()
+        postings.findOpenListedSince(since).stream()
                 .filter(w::matches)
-                .sorted((a, b) -> b.getFirstSeenAt().compareTo(a.getFirstSeenAt()))
+                .sorted((a, b) -> b.getListedAt().compareTo(a.getListedAt()))
                 .limit(MAX_BACKFILL)
                 .forEach(p -> addMatch(w, p, Instant.now()));
         return view(w, countNew(w.getId()));
@@ -113,7 +113,7 @@ public class JobWatchService {
                 .toList();
         Map<Long, JobPostingEntity> byId = postings.findAllById(rows.stream().map(JobMatchEntity::getPostingId).toList())
                 .stream().collect(Collectors.toMap(JobPostingEntity::getId, Function.identity()));
-        Map<Long, String> sourceNames = sourceNames();
+        Map<Long, JobSourceEntity> sourceNames = sourceNames();
 
         // One posting can match two watches; show it once, under the first.
         Map<Long, MatchView> unique = new LinkedHashMap<>();
@@ -122,7 +122,7 @@ public class JobWatchService {
             if (p != null && !unique.containsKey(p.getId())) {
                 unique.put(p.getId(), new MatchView(m.getId(), m.getWatchId(), mine.get(m.getWatchId()).getName(),
                         m.getStatus(), m.getMatchedAt(), m.getEmailedAt() != null,
-                        JobFeedService.view(p, sourceNames.get(p.getSourceId()))));
+                        JobFeedService.view(p, sourceNames.get(p.getSourceId()).getFullName(), sourceNames.get(p.getSourceId()).getType())));
             }
         }
         return new ArrayList<>(unique.values());
@@ -244,8 +244,8 @@ public class JobWatchService {
                 .filter(m -> m.getStatus() == JobMatchEntity.Status.NEW).count();
     }
 
-    private Map<Long, String> sourceNames() {
-        return sources.findAll().stream().collect(Collectors.toMap(JobSourceEntity::getId, JobSourceEntity::getFullName));
+    private Map<Long, JobSourceEntity> sourceNames() {
+        return sources.findAll().stream().collect(Collectors.toMap(JobSourceEntity::getId, Function.identity()));
     }
 
     private static WatchView view(JobWatchEntity w, long newMatches) {

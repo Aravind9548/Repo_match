@@ -13,7 +13,7 @@ import {
   type ResumeChoice,
 } from "@/lib/api";
 import { useTrackerKey } from "@/lib/trackerKey";
-import { StatusBadge, kindLabel, timeAgo } from "@/components/jobs/ui";
+import { StatusBadge, kindLabel, listedAt, timeAgo } from "@/components/jobs/ui";
 
 type Stage = "decide" | "resume" | "apply" | "tracked";
 
@@ -94,8 +94,8 @@ export function JobDecision({ postingId }: { postingId: number }) {
         <dl className="mt-10 grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-3">
           {[
             ["Location", posting.location ?? "Not listed"],
-            ["Listed", timeAgo(posting.firstSeenAt)],
-            ["Found on", posting.source ?? "—"],
+            ["Listed", timeAgo(listedAt(posting))],
+            ["Found on", posting.sourceType && posting.sourceType !== "GITHUB_LIST" ? `${posting.company} careers` : (posting.source ?? "—")],
           ].map(([k, v]) => (
             <div key={k} className="bg-paper px-5 py-4">
               <dt className="label">{k}</dt>

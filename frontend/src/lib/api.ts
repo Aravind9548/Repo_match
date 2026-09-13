@@ -286,7 +286,7 @@ export function describeError(err: unknown): string {
 
 // --- Jobs, alerts and the application tracker ------------------------------------------------------------------
 
-export type JobKind = "INTERNSHIP" | "NEW_GRAD";
+export type JobKind = "INTERNSHIP" | "NEW_GRAD" | "FULL_TIME";
 
 export type Posting = {
   id: number;
@@ -298,10 +298,24 @@ export type Posting = {
   closed: boolean;
   ageLabel: string | null;
   firstSeenAt: string;
+  /** When the employer published it, if the source says. */
+  postedAt: string | null;
+  country: string | null;
+  remote: boolean;
   source: string | null;
+  sourceType: "GITHUB_LIST" | "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | null;
 };
 
-export type PostingPage = { items: Posting[]; total: number; offset: number; limit: number };
+export type PostingPage = {
+  items: Posting[];
+  total: number;
+  offset: number;
+  limit: number;
+  /** How the search was read, e.g. "internships · in India · “backend”". */
+  understood: string;
+  /** Where the matches are, ignoring the place filter — used to suggest a better search. */
+  facets: { kinds: Partial<Record<JobKind, number>>; countries: Record<string, number>; remote: number };
+};
 
 export type ApplicationStatus =
   | "APPROVED"
@@ -366,6 +380,8 @@ export type JobMatch = {
 
 export type JobSource = {
   fullName: string;
+  type: Posting["sourceType"];
+  companyName: string | null;
   branch: string;
   enabled: boolean;
   lastCheckedAt: string | null;
@@ -429,3 +445,21 @@ export const updateApplication = (key: string, id: number, body: ApplicationUpda
   request<Application>(`/api/tracker/applications/${id}`, keyed(key, { method: "PATCH", body: JSON.stringify(body) }));
 export const deleteApplication = (key: string, id: number) =>
   request<void>(`/api/tracker/applications/${id}`, keyed(key, { method: "DELETE" }));
+
+export type WebJob = {
+  title: string;
+  company: string;
+  location: string;
+  posted: string;
+  url: string;
+  /** "open": the page loaded; "blocked": the site refuses automated checks, open it yourself. */
+  status: "open" | "blocked";
+  /** Set when the same job is already in the feed. */
+  postingId: number | null;
+};
+
+export type WebSearchResult = { query: string; jobs: WebJob[]; dropped: number; searchQueries: string[]; model: string };
+
+/** Paid (one grounded Gemini + Google Search call) — only on an explicit click. */
+export const webSearchJobs = (body: { q: string; location: string; kind: JobKind | "" }) =>
+  post<WebSearchResult>("/api/jobs/web-search", { ...body, kind: body.kind || null });

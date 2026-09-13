@@ -17,6 +17,10 @@ class JobWatchEntityTest {
         p.setRole(role);
         p.setLocation(location);
         p.setKind(kind);
+        Places.Place place = Places.of(location);
+        p.setCountry(place.country());
+        p.setRemote(place.remote());
+        p.setSearchText(SearchText.build(company, role, location, place));
         return p;
     }
 
@@ -37,6 +41,20 @@ class JobWatchEntityTest {
         JobPostingEntity closed = posting("Stripe", "Backend Intern", "Remote", JobKind.INTERNSHIP);
         closed.setClosed(true);
         assertThat(w.matches(closed)).isFalse();
+    }
+
+    @Test
+    void countriesCitySpellingsAndSynonymsWork() {
+        JobWatchEntity w = new JobWatchEntity();
+        w.setKeywords(new String[] {"sde"});
+        w.setLocations(new String[] {"India"});
+
+        assertThat(w.matches(posting("Okta", "Software Engineer Intern", "Bengaluru, India", JobKind.INTERNSHIP))).isTrue();
+        assertThat(w.matches(posting("AES", "Software Engineer Intern", "Indianapolis, IN", JobKind.INTERNSHIP))).isFalse();
+
+        JobWatchEntity city = new JobWatchEntity();
+        city.setLocations(new String[] {"bangalore"});
+        assertThat(city.matches(posting("Swiggy", "Backend Engineer", "Bengaluru, KA, India", JobKind.FULL_TIME))).isTrue();
     }
 
     @Test

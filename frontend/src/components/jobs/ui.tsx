@@ -60,7 +60,22 @@ export function PageHeader({
 }
 
 export function kindLabel(kind: Posting["kind"]) {
-  return kind === "INTERNSHIP" ? "Internship" : "New grad";
+  return kind === "INTERNSHIP" ? "Internship" : kind === "NEW_GRAD" ? "New grad" : "Full-time";
+}
+
+const COUNTRY_NAMES: Record<string, string> = {
+  IN: "India", US: "United States", CA: "Canada", GB: "United Kingdom", DE: "Germany", IE: "Ireland", SG: "Singapore",
+  NL: "Netherlands", FR: "France", JP: "Japan", AU: "Australia", PL: "Poland", MX: "Mexico", BR: "Brazil", IL: "Israel",
+  AE: "UAE", ES: "Spain", KR: "South Korea", CN: "China", CH: "Switzerland", SE: "Sweden",
+};
+
+export function countryName(code: string) {
+  return COUNTRY_NAMES[code] ?? code;
+}
+
+/** When a posting was listed: the employer's date when known. */
+export function listedAt(p: Posting) {
+  return p.postedAt ?? p.firstSeenAt;
 }
 
 export function timeAgo(iso: string) {
@@ -81,10 +96,11 @@ export function PostingRow({ posting, trailing }: { posting: Posting; trailing?:
         <span className="mt-1 block truncate text-sm text-muted">
           {posting.company}
           {posting.location ? ` · ${posting.location}` : ""}
+          {posting.remote && !/remote/i.test(posting.location ?? "") ? " · Remote" : ""}
         </span>
       </Link>
       <span className="label hidden sm:block">{kindLabel(posting.kind)}</span>
-      <span className="label w-24 text-right">{timeAgo(posting.firstSeenAt)}</span>
+      <span className="label w-24 text-right">{timeAgo(listedAt(posting))}</span>
       {trailing}
     </div>
   );

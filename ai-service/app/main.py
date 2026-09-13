@@ -13,6 +13,7 @@ from app.embeddings import Embedder, GeminiEmbedder
 from app.explainer import Explainer, GeminiExplainer
 from app.gemini import build_clients
 from app.ranking import cosine_similarities
+from app.websearch import GeminiWebSearcher, WebSearcher
 from app.schemas import (
     AnswerRequest,
     AnswerResponse,
@@ -25,6 +26,8 @@ from app.schemas import (
     RankResponse,
     ReadmeRequest,
     ReadmeResponse,
+    WebSearchRequest,
+    WebSearchResponse,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -56,6 +59,11 @@ def get_answerer() -> Answerer:
 def get_readme_drafter() -> ReadmeDrafter:
     s = get_settings()
     return GeminiReadmeDrafter(_clients().llm, s.llm_model, s.llm_temperature)
+
+
+def get_web_searcher() -> WebSearcher:
+    s = get_settings()
+    return GeminiWebSearcher(_clients().llm, s.web_search_model)
 
 
 def _upstream_error(e: Exception) -> HTTPException:
@@ -147,3 +155,12 @@ async def explain(req: ExplainRequest, explainer: Explainer = Depends(get_explai
     except _UPSTREAM_ERRORS as e:
         raise _upstream_error(e) from e
     return ExplainResponse(llm_model=explainer.model, results=results, usage=usage)
+
+
+@app.post("/websearch", response_model=WebSearchResponse)
+async def websearch(req: WebSearchRequest, searcher: WebSearcher = Depends(get_web_searcher)) -> WebSearchResponse:
+    """Finds open postings on the web with Gemini grounded in Google Search. Links are verified by the backend."""
+    try:
+        return await searcher.search(req.query, req.limit)
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e

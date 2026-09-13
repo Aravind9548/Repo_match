@@ -26,6 +26,10 @@ public class JobPostingEntity {
     private String applyUrl;
     private boolean closed;
     private String ageLabel;
+    private String country;
+    private boolean remote;
+    private Instant postedAt;
+    private String searchText;
     private Instant firstSeenAt;
     private Instant lastSeenAt;
 
@@ -46,6 +50,16 @@ public class JobPostingEntity {
     public void setClosed(boolean closed) { this.closed = closed; }
     public String getAgeLabel() { return ageLabel; }
     public void setAgeLabel(String ageLabel) { this.ageLabel = ageLabel; }
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
+    public boolean isRemote() { return remote; }
+    public void setRemote(boolean remote) { this.remote = remote; }
+    public Instant getPostedAt() { return postedAt; }
+    public void setPostedAt(Instant postedAt) { this.postedAt = postedAt; }
+    public String getSearchText() { return searchText; }
+    public void setSearchText(String searchText) { this.searchText = searchText; }
+    /** When the employer posted it if known, else when we first saw it. */
+    public Instant getListedAt() { return postedAt != null ? postedAt : firstSeenAt; }
     public Instant getFirstSeenAt() { return firstSeenAt; }
     public void setFirstSeenAt(Instant firstSeenAt) { this.firstSeenAt = firstSeenAt; }
     public Instant getLastSeenAt() { return lastSeenAt; }

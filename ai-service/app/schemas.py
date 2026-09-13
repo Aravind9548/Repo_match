@@ -117,3 +117,33 @@ class AnswerResponse(BaseModel):
     # False when the retrieved code doesn't contain the answer.
     answered: bool = True
     usage: TokenUsage | None = None
+
+
+# --- Web job search (Gemini + Google Search) ---------------------------------
+
+
+class WebSearchRequest(BaseModel):
+    query: str = Field(min_length=3, max_length=300)
+    limit: int = Field(default=12, ge=1, le=20)
+
+
+class WebJob(BaseModel):
+    title: str
+    company: str = ""
+    location: str = ""
+    url: str
+    posted: str = ""
+
+
+class WebSource(BaseModel):
+    title: str = ""
+    url: str
+
+
+class WebSearchResponse(BaseModel):
+    model: str
+    jobs: list[WebJob] = []
+    # Pages Google returned for the grounded answer.
+    sources: list[WebSource] = []
+    search_queries: list[str] = []
+    usage: TokenUsage | None = None
