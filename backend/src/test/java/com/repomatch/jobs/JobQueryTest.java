@@ -31,7 +31,8 @@ class JobQueryTest {
         JobQuery ng = JobQuery.parse("new grad machine learning remote", "");
         assertThat(ng.kind()).isEqualTo(JobKind.NEW_GRAD);
         assertThat(ng.remote()).isTrue();
-        assertThat(ng.concepts()).containsExactly(Set.of("ml", "machine learning"));
+        assertThat(ng.concepts()).singleElement().satisfies(c -> assertThat(c).containsExactlyInAnyOrder("ml", "machine learning"));
+        assertThat(JobQuery.parse("backend intern", null).describe()).isEqualTo("internships · “backend”");
     }
 
     @Test

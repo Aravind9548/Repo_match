@@ -80,7 +80,7 @@ public record JobQuery(JobKind kind, String country, boolean remote, Set<String>
                         remote |= place.remote();
                         cities.addAll(place.cityAliases());
                     } else if (SYNONYMS.containsKey(candidate)) {
-                        concepts.add(SYNONYMS.get(candidate));
+                        concepts.add(concept(candidate, SYNONYMS.get(candidate)));
                     } else {
                         continue;
                     }
@@ -95,7 +95,7 @@ public record JobQuery(JobKind kind, String country, boolean remote, Set<String>
                 continue;
             }
             if (!STOP.contains(one) && one.length() > 1) {
-                concepts.add(Set.of(one));
+                concepts.add(concept(one, Set.of(one)));
             }
         }
 
@@ -115,6 +115,14 @@ public record JobQuery(JobKind kind, String country, boolean remote, Set<String>
             }
         }
         return new JobQuery(kind, country, remote, cities, concepts);
+    }
+
+    /** The word as typed comes first, so the summary echoes the person's own wording. */
+    private static Set<String> concept(String typed, Set<String> alternatives) {
+        Set<String> ordered = new LinkedHashSet<>();
+        ordered.add(typed);
+        ordered.addAll(alternatives.stream().sorted().toList());
+        return java.util.Collections.unmodifiableSet(ordered);
     }
 
     /** A one-line summary of how the search was understood, shown above results. */

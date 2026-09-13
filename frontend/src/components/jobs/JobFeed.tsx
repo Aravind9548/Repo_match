@@ -39,9 +39,29 @@ export function JobFeed() {
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(0);
 
+  const hydrated = useRef(false);
+
   useEffect(() => {
     getJobSources().then(setSources).catch(() => setSources([]));
+    // A shared link (/jobs?q=internship+in+India) opens straight into that search.
+    const p = new URLSearchParams(window.location.search);
+    if (p.get("q")) setQ(p.get("q")!);
+    if (p.get("location")) setLocation(p.get("location")!);
+    const k = p.get("kind");
+    if (k === "INTERNSHIP" || k === "NEW_GRAD" || k === "FULL_TIME") setKind(k);
+    hydrated.current = true;
   }, []);
+
+  // Keep the address bar in step with the search, without adding history entries per keystroke.
+  useEffect(() => {
+    if (!hydrated.current) return;
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (location) p.set("location", location);
+    if (kind) p.set("kind", kind);
+    const next = `${window.location.pathname}${p.size ? `?${p}` : ""}`;
+    if (next !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(null, "", next);
+  }, [q, location, kind]);
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
