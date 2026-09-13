@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
+import { MobileNav, NavLinks } from "@/components/NavLinks";
 import { ScrollProgress } from "@/components/Reveal";
 import "./globals.css";
 
@@ -12,12 +13,13 @@ export const metadata: Metadata = {
   description: "Paste a job description, get back which of your GitHub projects to put on the resume — ranked, with citations.",
 };
 
-const NAV = [
+const FOOTER_NAV = [
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/#checkpoints", label: "Checkpoints" },
-  { href: "/ask", label: "Ask your codebase" },
-  { href: "/#tech-stack", label: "Tech stack" },
-  { href: "/#pricing", label: "Pricing" },
+  { href: "/analyze", label: "Match" },
+  { href: "/ask", label: "Genie" },
+  { href: "/jobs", label: "Jobs" },
+  { href: "/alerts", label: "Alerts" },
+  { href: "/tracker", label: "Tracker" },
 ];
 
 function Logo({ size = 30 }: { size?: number }) {
@@ -44,13 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </span>
             </Link>
 
-            <div className="hidden items-center gap-8 lg:flex">
-              {NAV.map((item) => (
-                <Link key={item.href} href={item.href} className="label hover:text-ink">
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            <NavLinks />
 
             <div className="flex items-center gap-3">
               <Link href="/history" className="label hidden hover:text-ink sm:block">
@@ -61,6 +57,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </Link>
             </div>
           </nav>
+          <MobileNav />
         </header>
 
         <main className="flex-1">{children}</main>
@@ -74,7 +71,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               </span>
             </Link>
             <div className="flex flex-wrap items-center gap-7">
-              {NAV.map((item) => (
+              {FOOTER_NAV.map((item) => (
                 <Link key={item.href} href={item.href} className="label hover:text-ink">
                   {item.label}
                 </Link>

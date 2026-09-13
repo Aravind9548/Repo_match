@@ -228,6 +228,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(problem);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
@@ -282,3 +283,149 @@ export function describeError(err: unknown): string {
       return detail ?? "Something went wrong. Please try again.";
   }
 }
+
+// --- Jobs, alerts and the application tracker ------------------------------------------------------------------
+
+export type JobKind = "INTERNSHIP" | "NEW_GRAD";
+
+export type Posting = {
+  id: number;
+  company: string;
+  role: string;
+  location: string | null;
+  kind: JobKind;
+  applyUrl: string;
+  closed: boolean;
+  ageLabel: string | null;
+  firstSeenAt: string;
+  source: string | null;
+};
+
+export type PostingPage = { items: Posting[]; total: number; offset: number; limit: number };
+
+export type ApplicationStatus =
+  | "APPROVED"
+  | "APPLIED"
+  | "ASSESSMENT"
+  | "INTERVIEW"
+  | "OFFER"
+  | "REJECTED"
+  | "GHOSTED"
+  | "WITHDRAWN";
+
+export type ResumeChoice = "CURRENT" | "TAILORED";
+
+export type ApplicationEvent = { id: number; status: ApplicationStatus | null; note: string | null; occurredAt: string };
+
+export type Application = {
+  id: number;
+  postingId: number | null;
+  company: string;
+  role: string;
+  applyUrl: string | null;
+  status: ApplicationStatus;
+  resumeChoice: ResumeChoice | null;
+  nextStep: string | null;
+  nextStepDue: string | null;
+  notes: string | null;
+  appliedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  events: ApplicationEvent[];
+};
+
+export type Watch = {
+  id: number;
+  name: string;
+  email: string | null;
+  keywords: string[];
+  excludeKeywords: string[];
+  locations: string[];
+  kinds: JobKind[];
+  active: boolean;
+  createdAt: string;
+  lastNotifiedAt: string | null;
+  newMatches: number;
+};
+
+export type WatchInput = Omit<Watch, "id" | "active" | "createdAt" | "lastNotifiedAt" | "newMatches"> & {
+  active?: boolean;
+};
+
+export type MatchStatus = "NEW" | "APPROVED" | "SKIPPED";
+
+export type JobMatch = {
+  id: number;
+  watchId: number;
+  watchName: string;
+  status: MatchStatus;
+  matchedAt: string;
+  emailed: boolean;
+  posting: Posting;
+};
+
+export type JobSource = {
+  fullName: string;
+  branch: string;
+  enabled: boolean;
+  lastCheckedAt: string | null;
+  lastCount: number;
+  lastError: string | null;
+};
+
+export type JobSearch = { q?: string; location?: string; kind?: JobKind | ""; sinceDays?: number; offset?: number; limit?: number };
+
+const keyed = (key: string, init?: RequestInit): RequestInit => ({
+  ...init,
+  headers: { ...init?.headers, "X-Tracker-Key": key },
+});
+
+export function searchJobs(s: JobSearch) {
+  const params = new URLSearchParams();
+  if (s.q) params.set("q", s.q);
+  if (s.location) params.set("location", s.location);
+  if (s.kind) params.set("kind", s.kind);
+  if (s.sinceDays) params.set("sinceDays", String(s.sinceDays));
+  params.set("offset", String(s.offset ?? 0));
+  params.set("limit", String(s.limit ?? 30));
+  return request<PostingPage>(`/api/jobs?${params}`);
+}
+
+export const getPosting = (id: number, key: string | null) =>
+  request<{ posting: Posting; application: Application | null }>(`/api/jobs/${id}`, key ? keyed(key) : undefined);
+export const getJobSources = () => request<JobSource[]>("/api/jobs/sources");
+export const refreshJobs = () => post<unknown>("/api/jobs/refresh", {});
+export const newTrackerKey = () => post<{ key: string }>("/api/tracker/keys", {});
+
+export const listWatches = (key: string) => request<Watch[]>("/api/alerts", keyed(key));
+export const createWatch = (key: string, body: WatchInput) =>
+  request<Watch>("/api/alerts", keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export const updateWatch = (key: string, id: number, body: WatchInput) =>
+  request<Watch>(`/api/alerts/${id}`, keyed(key, { method: "PATCH", body: JSON.stringify(body) }));
+export const deleteWatch = (key: string, id: number) =>
+  request<void>(`/api/alerts/${id}`, keyed(key, { method: "DELETE" }));
+export const listMatches = (key: string, status?: MatchStatus) =>
+  request<JobMatch[]>(`/api/alerts/matches${status ? `?status=${status}` : ""}`, keyed(key));
+
+export const listApplications = (key: string) => request<Application[]>("/api/tracker/applications", keyed(key));
+export const getApplication = (key: string, id: number) =>
+  request<Application>(`/api/tracker/applications/${id}`, keyed(key));
+export const approvePosting = (key: string, postingId: number) =>
+  request<Application>(`/api/tracker/postings/${postingId}/approve`, keyed(key, { method: "POST", body: "{}" }));
+export const skipPosting = (key: string, postingId: number) =>
+  request<void>(`/api/tracker/postings/${postingId}/skip`, keyed(key, { method: "POST", body: "{}" }));
+export const addApplication = (key: string, body: { company: string; role: string; applyUrl?: string }) =>
+  request<Application>("/api/tracker/applications", keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export type ApplicationUpdate = Partial<{
+  status: ApplicationStatus;
+  resumeChoice: ResumeChoice;
+  nextStep: string;
+  nextStepDue: string | null;
+  clearNextStep: boolean;
+  notes: string;
+  eventNote: string;
+}>;
+export const updateApplication = (key: string, id: number, body: ApplicationUpdate) =>
+  request<Application>(`/api/tracker/applications/${id}`, keyed(key, { method: "PATCH", body: JSON.stringify(body) }));
+export const deleteApplication = (key: string, id: number) =>
+  request<void>(`/api/tracker/applications/${id}`, keyed(key, { method: "DELETE" }));

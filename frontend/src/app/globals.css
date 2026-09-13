@@ -36,6 +36,7 @@
   --color-body: var(--body);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-accent-soft: var(--accent-soft);
@@ -182,6 +183,39 @@ body {
   }
 }
 
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.page-enter {
+  animation: page-enter 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Browsers with the View Transitions API cross-fade the whole page between routes. */
+@view-transition {
+  navigation: auto;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+}
+
+/* Status colours shared by the tracker board, badges and timelines. */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+
 .connector-running {
   stroke-dasharray: 6 6;
   animation: march 0.8s linear infinite;
@@ -218,6 +252,7 @@ body {
   .spin-y,
   .bob,
   .halo,
+  .page-enter,
   .animate-rise {
     animation: none;
   }

@@ -6,7 +6,16 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "repomatch")
-public record AppProperties(GitHub github, Ai ai, Analysis analysis, Limits limits, Cors cors) {
+public record AppProperties(GitHub github, Ai ai, Analysis analysis, Limits limits, Cors cors, Notify notifications) {
+
+    /**
+     * @param appBaseUrl  the deployed frontend, for links in emails
+     * @param mailFrom    sender address; blank disables email (alerts still appear in the app)
+     * @param cronSecret  shared secret Cloud Scheduler sends to the refresh endpoint
+     * @param linkSecret  signs the tracker links inside emails
+     */
+    public record Notify(String appBaseUrl, String mailFrom, String cronSecret, String linkSecret) {
+    }
 
     /** Guards on paid LLM calls (see UsageGuard). */
     public record Limits(int llmCallsPerClientPerHour, int llmCallsPerDay) {

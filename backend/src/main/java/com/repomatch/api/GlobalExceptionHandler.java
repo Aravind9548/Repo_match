@@ -25,6 +25,10 @@ import com.repomatch.code.NotIndexedException;
 import com.repomatch.code.NothingToIndexException;
 import com.repomatch.code.RepoNotFoundException;
 import com.repomatch.analysis.UsageLimitException;
+import com.repomatch.jobs.JobFeedService;
+import com.repomatch.jobs.JobWatchService;
+import com.repomatch.jobs.OwnerKeys;
+import com.repomatch.tracker.TrackerService;
 import com.repomatch.workflow.InvalidSelectionException;
 import com.repomatch.workflow.WorkflowNotFoundException;
 import com.repomatch.workflow.WorkflowStepException;
@@ -67,6 +71,34 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
                 .body(pd);
+    }
+
+    @ExceptionHandler({JobFeedService.PostingNotFoundException.class, JobWatchService.WatchNotFoundException.class,
+            TrackerService.ApplicationNotFoundException.class})
+    ProblemDetail jobThingNotFound(RuntimeException e) {
+        return problem(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
+    }
+
+    @ExceptionHandler(OwnerKeys.MissingOwnerKeyException.class)
+    ProblemDetail noKey(OwnerKeys.MissingOwnerKeyException e) {
+        return problem(HttpStatus.UNAUTHORIZED, "Tracker key needed", e.getMessage());
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleServletRequestBindingException(
+            org.springframework.web.bind.ServletRequestBindingException ex, HttpHeaders headers, HttpStatusCode status,
+            WebRequest request) {
+        if (ex instanceof org.springframework.web.bind.MissingRequestHeaderException m
+                && JobsController.KEY_HEADER.equals(m.getHeaderName())) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(problem(HttpStatus.UNAUTHORIZED, "Tracker key needed", new OwnerKeys.MissingOwnerKeyException().getMessage()));
+        }
+        return super.handleServletRequestBindingException(ex, headers, status, request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    ProblemDetail badArgument(IllegalArgumentException e) {
+        return problem(HttpStatus.BAD_REQUEST, "Invalid request", e.getMessage());
     }
 
     @ExceptionHandler(RepoNotFoundException.class)
