@@ -17,6 +17,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins(props.cors().allowedOrigins().toArray(String[]::new))
-                .allowedMethods("GET", "POST", "OPTIONS");
+                // The tracker edits and deletes; X-Tracker-Key is covered by the default "any header".
+                .allowedMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS");
     }
 }
