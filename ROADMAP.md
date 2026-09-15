@@ -13,6 +13,8 @@ Every paid AI step waits for a human click; nothing is ever submitted on the use
 | **Web search** | On demand: Gemini grounded in Google Search, every link opened before it's shown. |
 | **Alerts** | Saved searches using the same matcher as the feed; in-app inbox, optional email digests with signed links. |
 | **Tracker** | Approve → choose resume → submit yourself → log what comes back. Deadlines reminded 2 days ahead, quiet applications nudged after 2 weeks. |
+| **Resume tailoring** | Upload PDF/DOCX/.tex/text (or reuse a saved one) → check how it was read and the job description (fetched from the posting's source) → accept or reject each proposed edit (edits must match resume text; wording that adds a tool or copies the job ad is flagged and off by default; gaps listed, never inserted) → LaTeX (your own .tex or a clean template) compiled to PDF with Tectonic. |
+| **India coverage** | 94 sources: Workday career sites filtered to India, India internship lists on GitHub, 88 company boards, and a daily capped Google discovery that keeps only postings whose page names the company and title. |
 
 ## Now — India coverage (this iteration)
 
@@ -33,7 +35,6 @@ Goal: most of the internships a student in India would find by searching, withou
 ## Next
 
 - **Fit score per posting** — embed postings once, rank the feed by similarity to the user's own repos.
-- **Resume tailoring (LaTeX)** — the "Tailored" choice produces a reviewed diff and a PDF (Tectonic).
 - **Apply kit** — per posting: resume PDF, answers to common questions drafted from real repos, the link.
 - **Email on** — user adds a Gmail App Password; alerts and reminders go out.
 - **Deadline extraction** — read "apply by" dates from posting pages where they exist.
