@@ -138,7 +138,11 @@ public final class Places {
     }
 
     static Set<String> expand(String city) {
-        return CITY_ALIASES.stream().filter(g -> g.contains(city)).findFirst().map(Set::copyOf).orElse(Set.of(city));
+        Set<String> ordered = new LinkedHashSet<>();
+        ordered.add(city);
+        CITY_ALIASES.stream().filter(g -> g.contains(city)).findFirst()
+                .ifPresent(g -> ordered.addAll(g.stream().sorted().toList()));
+        return java.util.Collections.unmodifiableSet(ordered);
     }
 
     public static String countryName(String code) {

@@ -24,7 +24,7 @@ public final class JobListParser {
     private static final Pattern ROW = Pattern.compile("<tr\\b[^>]*>(.*?)</tr>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
     private static final Pattern CELL = Pattern.compile("<t([hd])[^>]*>(.*?)</t[hd]>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
     private static final Pattern HREF = Pattern.compile("href=\"([^\"]+)\"");
-    private static final Pattern MD_LINK = Pattern.compile("\\[([^\\]]*)]\\(([^)\\s]+)\\)");
+    private static final Pattern MD_LINK = Pattern.compile("\\[((?:[^\\[\\]]|\\[[^\\]]*\\])*)]\\(([^)\\s]+)\\)");
     private static final Pattern TAG = Pattern.compile("<[^>]+>");
     private static final String CLOSED = "🔒";
 

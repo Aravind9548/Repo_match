@@ -101,6 +101,16 @@ class JobListParserTest {
     }
 
     @Test
+    void stripsLinksWhoseTextHasBrackets() {
+        String md = """
+                | Company | Role | Location | Apply |
+                |---|---|---|---|
+                | Enterpret | [[Backend, Onsite] Software Engineering Intern](https://x.com/jobs/1) | Bengaluru | [Apply](https://x.com/jobs/1/apply) |
+                """;
+        assertThat(JobListParser.parse(md).getFirst().role()).isEqualTo("[Backend, Onsite] Software Engineering Intern");
+    }
+
+    @Test
     void ignoresTablesThatAreNotJobLists() {
         String md = """
                 | Section | Link |

@@ -36,6 +36,12 @@ class JobQueryTest {
     }
 
     @Test
+    void summaryEchoesTheCityAsTyped() {
+        assertThat(JobQuery.parse("intern pune", null).describe()).isEqualTo("internships · near Pune");
+        assertThat(JobQuery.parse("intern bangalore", null).describe()).isEqualTo("internships · near Bangalore");
+    }
+
+    @Test
     void seasonsAreSearchable() {
         JobQuery q = JobQuery.parse("summer internship india", null);
         assertThat(q.kind()).isEqualTo(JobKind.INTERNSHIP);
