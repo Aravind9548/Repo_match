@@ -107,12 +107,12 @@ public class WebJobSearchService {
 
     private WebJob verify(WebSearchResponse.Job j) {
         String url = resolve(j.url());
-        if (url == null) {
-            return null;
+        if (url == null || PostingCheck.isListingUrl(url)) {
+            return null; // a search-results or home page labelled as a posting
         }
-        String status = check(url);
-        if ("gone".equals(status)) {
-            return null;
+        String status = check(url, j.title(), j.company());
+        if (!"open".equals(status) && !"blocked".equals(status)) {
+            return null; // gone, or the page doesn't mention this company and title
         }
         String canonical = JobFeedService.canonicalUrl(url);
         List<Long> ids = jdbc.queryForList("select id from job_posting where apply_url = ? and not closed", Long.class, canonical);
@@ -139,15 +139,28 @@ public class WebJobSearchService {
         }
     }
 
-    private String check(String url) {
+    /** Enough of a page to find its title tag and embedded job data. */
+    private static final int MAX_PAGE_BYTES = 600_000;
+
+    /**
+     * "open": loaded and mentions this company and title. "mismatch": loaded but it's about something else.
+     * "blocked": the site refuses automated visits, so it can't be confirmed. "gone": 404/410.
+     */
+    private String check(String url, String title, String company) {
         try {
-            HttpResponse<Void> r = followRedirects.send(request(url, "GET"), HttpResponse.BodyHandlers.discarding());
+            HttpResponse<java.io.InputStream> r = followRedirects.send(request(url, "GET"), HttpResponse.BodyHandlers.ofInputStream());
             int code = r.statusCode();
-            if (code < 400) {
-                return "open";
+            try (java.io.InputStream body = r.body()) {
+                if (code >= 400) {
+                    // LinkedIn answers bots with 999, many career sites with 401/403/429: real pages, just not for us.
+                    return code == 404 || code == 410 ? "gone" : "blocked";
+                }
+                if (PostingCheck.isListingUrl(r.uri().toString())) {
+                    return "mismatch"; // redirected to a search page: the posting is gone
+                }
+                String html = new String(body.readNBytes(MAX_PAGE_BYTES), java.nio.charset.StandardCharsets.UTF_8);
+                return PostingCheck.pageMatches(html, title, company) ? "open" : "mismatch";
             }
-            // LinkedIn answers bots with 999, many career sites with 401/403/429: real pages, just not for us.
-            return code == 404 || code == 410 ? "gone" : "blocked";
         } catch (Exception e) {
             return "blocked";
         }

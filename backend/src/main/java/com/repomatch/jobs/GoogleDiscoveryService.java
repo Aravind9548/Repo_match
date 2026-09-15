@@ -108,6 +108,9 @@ public class GoogleDiscoveryService {
                     if (j.postingId() != null || j.title() == null || j.title().isBlank()) {
                         continue; // already in the feed from a real board
                     }
+                    if (!"open".equals(j.status())) {
+                        continue; // the feed only takes postings whose page we read and matched, never "check it yourself"
+                    }
                     postings.putIfAbsent(JobFeedService.canonicalUrl(j.url()), toPosting(j));
                 }
             }

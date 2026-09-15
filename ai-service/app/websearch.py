@@ -30,7 +30,9 @@ Return ONLY a JSON array, no prose, with up to {limit} items shaped like:
 
 Rules:
 - Every item must be a single job posting you saw in the search results. Never invent a posting, company or URL.
-- "url" is the page for that one posting (or the company's careers page listing it), exactly as found.
+- "url" must be the page of that ONE posting, exactly as found. Never a search-results or listing page \
+(e.g. indeed.com/q-...-jobs.html, linkedin.com/jobs/search, naukri "...-jobs" pages) and never a careers home page.
+- "company" is the employer named on that posting's own page. Never guess it from the search query or another result.
 - Leave "location" or "posted" empty when the result doesn't say.
 - If you find nothing that fits, return [].
 """
