@@ -67,4 +67,39 @@ class BoardFetcherTest {
         assertThat(p.getFirst().country()).isEqualTo("IN");
         assertThat(p.getFirst().intern()).isFalse();
     }
+
+    @Test
+    void workdayFindsNestedIndiaFacetAndBuildsPublicUrls() throws Exception {
+        var page = json.readTree("""
+                {"total":2,"facets":[{"facetParameter":"locationMainGroup","values":[
+                   {"facetParameter":"locationHierarchy1","descriptor":"Locations","values":[
+                     {"descriptor":"United States","id":"us1","count":900},{"descriptor":"India","id":"in1","count":248}]},
+                   {"facetParameter":"locations","descriptor":"Sites","values":[{"descriptor":"India, Pune","id":"p1","count":68}]}]}],
+                 "jobPostings":[
+                   {"title":"PhD Intern, AI ML","externalPath":"/job/India-Bengaluru/PhD-Intern_JR1","locationsText":"India, Bengaluru","postedOn":"Posted 14 Days Ago"},
+                   {"title":"Support Engineer","externalPath":"/job/India-Pune/Support_JR2","locationsText":"2 Locations","postedOn":"Posted Today"}]}""");
+
+        assertThat(BoardFetcher.indiaFacet(page)).isEqualTo(java.util.Map.entry("locationHierarchy1", "in1"));
+
+        List<FetchedPosting> p = BoardFetcher.workdayJobs(page, "nvidia.wd5.myworkdayjobs.com", "NVIDIAExternalCareerSite", "NVIDIA", true);
+        assertThat(p).hasSize(2);
+        assertThat(p.get(0).applyUrl()).isEqualTo("https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/India-Bengaluru/PhD-Intern_JR1");
+        assertThat(p.get(0).country()).isEqualTo("IN");
+        assertThat(p.get(1).location()).isEqualTo("India Pune");
+
+        // Text-search fallback keeps only what reads as India.
+        var loose = json.readTree("""
+                {"jobPostings":[{"title":"Yard Driver","externalPath":"/job/x/1","locationsText":"Indianapolis, IN 46231","postedOn":"Posted Today"},
+                                {"title":"Engineer","externalPath":"/job/y/2","locationsText":"Hyderabad, India","postedOn":"Posted Today"}]}""");
+        assertThat(BoardFetcher.workdayJobs(loose, "h", "s", "C", false)).extracting(FetchedPosting::role).containsExactly("Engineer");
+    }
+
+    @Test
+    void googleResultsBecomePostings() {
+        var j = new WebJobSearchService.WebJob("Backend Intern", "", "", "3 days ago", "https://x.com/jobs/1", "open", null);
+        FetchedPosting p = GoogleDiscoveryService.toPosting(j);
+        assertThat(p.country()).isEqualTo("IN");
+        assertThat(p.company()).isEqualTo("Unknown company");
+        assertThat(p.postedAt()).isNotNull();
+    }
 }

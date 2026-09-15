@@ -303,7 +303,7 @@ export type Posting = {
   country: string | null;
   remote: boolean;
   source: string | null;
-  sourceType: "GITHUB_LIST" | "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | null;
+  sourceType: "GITHUB_LIST" | "GREENHOUSE" | "LEVER" | "ASHBY" | "SMARTRECRUITERS" | "WORKDAY" | "GOOGLE_SEARCH" | null;
 };
 
 export type PostingPage = {

@@ -13,7 +13,7 @@ import {
   type ResumeChoice,
 } from "@/lib/api";
 import { useTrackerKey } from "@/lib/trackerKey";
-import { StatusBadge, kindLabel, listedAt, timeAgo } from "@/components/jobs/ui";
+import { StatusBadge, kindLabel, listedAt, sourceLabel, timeAgo } from "@/components/jobs/ui";
 
 type Stage = "decide" | "resume" | "apply" | "tracked";
 
@@ -95,7 +95,7 @@ export function JobDecision({ postingId }: { postingId: number }) {
           {[
             ["Location", posting.location ?? "Not listed"],
             ["Listed", timeAgo(listedAt(posting))],
-            ["Found on", posting.sourceType && posting.sourceType !== "GITHUB_LIST" ? `${posting.company} careers` : (posting.source ?? "—")],
+            ["Found on", sourceLabel(posting)],
           ].map(([k, v]) => (
             <div key={k} className="bg-paper px-5 py-4">
               <dt className="label">{k}</dt>

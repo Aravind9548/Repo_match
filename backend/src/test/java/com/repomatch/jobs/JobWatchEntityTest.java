@@ -80,7 +80,7 @@ class JobWatchEntityTest {
     @Test
     void signedLinksResolveToTheOwnerAndTamperingFails() {
         OwnerKeys keys = new OwnerKeys(new AppProperties(null, null, null, null, null,
-                new AppProperties.Notify(null, null, null, "a-test-secret-that-is-long-enough")));
+                new AppProperties.Notify(null, null, null, "a-test-secret-that-is-long-enough"), null));
         String raw = OwnerKeys.newKey();
         String owner = keys.resolve(raw);
 

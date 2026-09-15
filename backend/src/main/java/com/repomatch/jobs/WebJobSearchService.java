@@ -64,23 +64,8 @@ public class WebJobSearchService {
         WebSearchResponse res = ai.webSearch(new WebSearchRequest(query, LIMIT));
         List<WebSearchResponse.Job> found = res.jobs() == null ? List.of() : res.jobs();
 
-        List<WebJob> checked = new ArrayList<>();
-        int dropped = 0;
-        try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
-            List<Future<WebJob>> futures = found.stream().map(j -> pool.submit(() -> verify(j))).toList();
-            for (Future<WebJob> f : futures) {
-                try {
-                    WebJob j = f.get();
-                    if (j == null) {
-                        dropped++;
-                    } else {
-                        checked.add(j);
-                    }
-                } catch (Exception e) {
-                    dropped++;
-                }
-            }
-        }
+        List<WebJob> checked = verifyAll(found);
+        int dropped = found.size() - checked.size();
         log.info("web job search '{}': {} found, {} kept, {} dropped", query, found.size(), checked.size(), dropped);
         return new Result(query, checked, dropped, res.searchQueries() == null ? List.of() : res.searchQueries(), res.model());
     }
@@ -99,6 +84,25 @@ public class WebJobSearchService {
         }
         String s = b.toString().strip();
         return s.isEmpty() ? "software engineering internship" : s;
+    }
+
+    /** Resolves and opens every link in parallel; dead ones are dropped. */
+    public List<WebJob> verifyAll(List<WebSearchResponse.Job> found) {
+        List<WebJob> checked = new ArrayList<>();
+        try (ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor()) {
+            List<Future<WebJob>> futures = found.stream().map(j -> pool.submit(() -> verify(j))).toList();
+            for (Future<WebJob> f : futures) {
+                try {
+                    WebJob j = f.get();
+                    if (j != null) {
+                        checked.add(j);
+                    }
+                } catch (Exception ignored) {
+                    // an unreachable link is simply not shown
+                }
+            }
+        }
+        return checked;
     }
 
     private WebJob verify(WebSearchResponse.Job j) {

@@ -62,7 +62,10 @@ public class JobFeedService {
     /** Re-reads every enabled source; returns the postings seen for the first time. */
     public RefreshResult refresh() {
         Instant started = Instant.now();
-        List<JobSourceEntity> enabled = sources.findByEnabledTrueOrderById();
+        // Google discovery has its own daily schedule and cost cap (GoogleDiscoveryService).
+        List<JobSourceEntity> enabled = sources.findByEnabledTrueOrderById().stream()
+                .filter(s -> s.getType() != SourceType.GOOGLE_SEARCH)
+                .toList();
 
         // Fetch in parallel (network-bound), write one source at a time (the database is the bottleneck).
         Map<JobSourceEntity, Future<List<FetchedPosting>>> fetches = new LinkedHashMap<>();
@@ -117,14 +120,18 @@ public class JobFeedService {
         Instant now = Instant.now();
         return JobListParser.parse(markdown).stream().map(p -> {
             Places.Place place = Places.of(p.location());
-            // Lists give an age ("3d"), not a date.
+            // Lists give either a date ("12 Sept 2026") or an age ("3d").
+            Instant date = JobListParser.dateOf(p.ageLabel());
             return new FetchedPosting(p.company(), p.role(), p.location(), place.country(), place.remote(), p.applyUrl(),
-                    p.closed(), p.ageLabel(), now.minus(ageOf(p.ageLabel())), false);
+                    p.closed(), p.ageLabel(), date != null ? date : now.minus(ageOf(p.ageLabel())), false);
         }).toList();
     }
 
+    /** How long a Google-found posting survives without Google finding it again (results vary day to day). */
+    static final Duration SEARCH_RESULT_TTL = Duration.ofDays(21);
+
     /** Upserts one source's postings in bulk and closes the ones it no longer lists. */
-    private SourceResult store(JobSourceEntity source, List<FetchedPosting> listed, Instant now, List<Long> fresh) {
+    SourceResult store(JobSourceEntity source, List<FetchedPosting> listed, Instant now, List<Long> fresh) {
         boolean firstSync = source.getLastCheckedAt() == null;
         Map<String, FetchedPosting> byUrl = new LinkedHashMap<>();
         for (FetchedPosting p : listed) {
@@ -171,9 +178,12 @@ public class JobFeedService {
             // Rows created in this run carry this run's timestamp as first_seen_at.
             List<Long> added = jdbc.queryForList(
                     "select id from job_posting where source_id = ? and first_seen_at = ?", Long.class, source.getId(), at);
+            // A board or list that stops showing a job means it's gone. Search results are a sample, so those
+            // only expire after going unseen for a while.
+            Timestamp closeBefore = source.getType() == SourceType.GOOGLE_SEARCH ? Timestamp.from(now.minus(SEARCH_RESULT_TTL)) : at;
             int closed = jdbc.update(
                     "update job_posting set closed = true where source_id = ? and last_seen_at < ? and not closed",
-                    source.getId(), at);
+                    source.getId(), closeBefore);
             jdbc.update("update job_source set last_checked_at = ?, last_count = ?, last_error = null where id = ?",
                     at, byUrl.size(), source.getId());
             // A new source's backlog isn't news; alert only on what appears after we started watching it.

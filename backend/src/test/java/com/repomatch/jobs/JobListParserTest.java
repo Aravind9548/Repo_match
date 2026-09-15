@@ -70,6 +70,37 @@ class JobListParserTest {
     }
 
     @Test
+    void readsIndiaListFormats() {
+        // akshat0011: apply link in an unnamed last column, role cell links to an aggregator page.
+        String unnamed = """
+                | Company | Role | Location | Posted | |
+                | --- | --- | --- | --- | --- |
+                | [Kaleris](https://interndoor.com/companies/kaleris) | [Associate Software Engineer - Intern](https://interndoor.com/jobs/x) | Chennai | 12 Sept 2026 | [Apply](https://kaleris.wd501.myworkdayjobs.com/en-US/kaleris_careers/job/Chennai/R-100644) |
+                """;
+        JobListParser.Posting a = JobListParser.parse(unnamed).getFirst();
+        assertThat(a.applyUrl()).isEqualTo("https://kaleris.wd501.myworkdayjobs.com/en-US/kaleris_careers/job/Chennai/R-100644");
+        assertThat(a.location()).isEqualTo("Chennai");
+        assertThat(JobListParser.dateOf(a.ageLabel())).hasToString("2026-09-12T00:00:00Z");
+
+        // FresherFlow: skill tags under the title, short dates.
+        String html = """
+                <table><thead><tr><th>Company</th><th>Role</th><th>Location</th><th>Apply</th><th>Posted</th></tr></thead>
+                <tbody><tr>
+                <td><strong>ixigo</strong></td>
+                <td>Full-Stack Intern<br><small>Python, Node.js, Postgres</small></td>
+                <td>Gurugram</td>
+                <td align="center"><a href="https://jobs.smartrecruiters.com/ixigo/744000148960832"><img alt="Apply" src="https://img.shields.io/badge/Apply"></a></td>
+                <td>14 Sep 26</td>
+                </tr></tbody></table>
+                """;
+        JobListParser.Posting f = JobListParser.parse(html).getFirst();
+        assertThat(f.role()).isEqualTo("Full-Stack Intern");
+        assertThat(JobListParser.dateOf(f.ageLabel())).hasToString("2026-09-14T00:00:00Z");
+        assertThat(JobListParser.dateOf("Sep 11, 2026")).hasToString("2026-09-11T00:00:00Z");
+        assertThat(JobListParser.dateOf("3d")).isNull();
+    }
+
+    @Test
     void ignoresTablesThatAreNotJobLists() {
         String md = """
                 | Section | Link |

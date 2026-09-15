@@ -6,7 +6,15 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "repomatch")
-public record AppProperties(GitHub github, Ai ai, Analysis analysis, Limits limits, Cors cors, Notify notifications) {
+public record AppProperties(GitHub github, Ai ai, Analysis analysis, Limits limits, Cors cors, Notify notifications,
+                            Discovery discovery) {
+
+    /** Daily grounded Google searches that add postings to the feed (paid: one Gemini call per query). */
+    public record Discovery(boolean enabled, int maxQueriesPerRun, List<String> queries) {
+        public Discovery {
+            queries = queries == null ? List.of() : List.copyOf(queries);
+        }
+    }
 
     /**
      * @param appBaseUrl  the deployed frontend, for links in emails

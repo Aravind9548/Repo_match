@@ -17,7 +17,7 @@ public record JobQuery(JobKind kind, String country, boolean remote, Set<String>
 
     private static final Set<String> STOP = Set.of("in", "at", "for", "jobs", "job", "role", "roles", "position",
             "positions", "opening", "openings", "hiring", "the", "a", "an", "and", "or", "of", "to", "with", "based",
-            "near", "me", "opportunity", "opportunities", "vacancy", "vacancies", "summer", "2026", "2027", "location");
+            "near", "me", "opportunity", "opportunities", "vacancy", "vacancies", "2026", "2027", "location", "apply");
 
     private static final Set<String> INTERN_WORDS = Set.of("intern", "interns", "internship", "internships", "co-op",
             "coop", "co op", "trainee", "apprentice", "apprenticeship");
@@ -30,6 +30,13 @@ public record JobQuery(JobKind kind, String country, boolean remote, Set<String>
             Map.entry("sde", Set.of("sde", "software development engineer", "software engineer", "swe")),
             Map.entry("swe", Set.of("swe", "software engineer", "software development engineer", "sde")),
             Map.entry("software", Set.of("software")),
+            // Seasons live in titles: "Summer 2027 Intern", "Winter Internship", "6-month co-op".
+            Map.entry("summer", Set.of("summer")),
+            Map.entry("winter", Set.of("winter")),
+            Map.entry("fall", Set.of("fall", "autumn")),
+            Map.entry("spring", Set.of("spring")),
+            Map.entry("6 month", Set.of("6 month", "6-month", "six month", "6 months")),
+            Map.entry("six month", Set.of("6 month", "6-month", "six month", "6 months")),
             Map.entry("backend", Set.of("backend", "back-end", "back end", "server")),
             Map.entry("frontend", Set.of("frontend", "front-end", "front end", "ui engineer", "web developer")),
             Map.entry("fullstack", Set.of("fullstack", "full-stack", "full stack")),

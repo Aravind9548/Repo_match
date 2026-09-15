@@ -73,6 +73,21 @@ export function countryName(code: string) {
   return COUNTRY_NAMES[code] ?? code;
 }
 
+/** Where a posting came from, in words a person uses. */
+export function sourceLabel(p: Posting) {
+  switch (p.sourceType) {
+    case "GITHUB_LIST":
+      return p.source ?? "GitHub list";
+    case "GOOGLE_SEARCH":
+      return "Google search";
+    case null:
+    case undefined:
+      return p.source ?? "—";
+    default:
+      return `${p.company} careers`;
+  }
+}
+
 /** When a posting was listed: the employer's date when known. */
 export function listedAt(p: Posting) {
   return p.postedAt ?? p.firstSeenAt;

@@ -48,12 +48,15 @@ public class JobsController {
     private final TrackerService tracker;
     private final OwnerKeys keys;
     private final com.repomatch.jobs.WebJobSearchService web;
+    private final com.repomatch.jobs.GoogleDiscoveryService discovery;
     private final String cronSecret;
     private final AtomicReference<Instant> lastRefresh = new AtomicReference<>(Instant.EPOCH);
 
     public JobsController(JobFeedService feed, JobWatchService watches, TrackerService tracker, OwnerKeys keys,
-                          com.repomatch.jobs.WebJobSearchService web, AppProperties props) {
+                          com.repomatch.jobs.WebJobSearchService web,
+                          com.repomatch.jobs.GoogleDiscoveryService discovery, AppProperties props) {
         this.web = web;
+        this.discovery = discovery;
         this.feed = feed;
         this.watches = watches;
         this.tracker = tracker;
@@ -104,13 +107,14 @@ public class JobsController {
                 s.getLastCheckedAt(), s.getLastCount(), s.getLastError())).toList();
     }
 
-    public record RunResult(JobFeedService.RefreshResult feed, JobWatchService.AlertRun alerts,
-                            TrackerService.ReminderRun reminders) {
+    public record RunResult(JobFeedService.RefreshResult feed, com.repomatch.jobs.GoogleDiscoveryService.Run discovery,
+                            JobWatchService.AlertRun alerts, TrackerService.ReminderRun reminders) {
     }
 
     /** Cloud Scheduler calls this with the shared secret: refresh, alert, remind. */
     @PostMapping("/api/jobs/cron")
-    public ResponseEntity<RunResult> cron(@RequestHeader(value = "X-Cron-Secret", required = false) String secret) {
+    public ResponseEntity<RunResult> cron(@RequestHeader(value = "X-Cron-Secret", required = false) String secret,
+                                          @RequestParam(defaultValue = "false") boolean forceDiscovery) {
         if (cronSecret == null || cronSecret.isBlank() || !java.security.MessageDigest.isEqual(
                 cronSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 (secret == null ? "" : secret).getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
@@ -118,7 +122,10 @@ public class JobsController {
         }
         lastRefresh.set(Instant.now());
         JobFeedService.RefreshResult r = feed.refresh();
-        return ResponseEntity.ok(new RunResult(r, watches.alert(r.newPostingIds()), tracker.remind()));
+        var found = discovery.runIfDue(forceDiscovery);
+        List<Long> fresh = new java.util.ArrayList<>(r.newPostingIds());
+        fresh.addAll(found.newPostingIds());
+        return ResponseEntity.ok(new RunResult(r, found, watches.alert(fresh), tracker.remind()));
     }
 
     /** The "refresh now" button: at most every ten minutes across all users. */
@@ -130,7 +137,7 @@ public class JobsController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
         JobFeedService.RefreshResult r = feed.refresh();
-        return ResponseEntity.ok(new RunResult(r, watches.alert(r.newPostingIds()), null));
+        return ResponseEntity.ok(new RunResult(r, null, watches.alert(r.newPostingIds()), null));
     }
 
     // --- tracker key ----------------------------------------------------------------------------------------------

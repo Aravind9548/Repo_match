@@ -19,7 +19,7 @@ const KINDS: { value: JobKind | ""; label: string }[] = [
   { value: "NEW_GRAD", label: "New grad" },
   { value: "FULL_TIME", label: "Full-time" },
 ];
-const EXAMPLES = ["internship in India", "backend intern bangalore", "new grad remote", "ML intern hyderabad", "SDE Paytm"];
+const EXAMPLES = ["internship in India", "summer intern india", "winter internship", "SDE intern bangalore", "fresher hyderabad", "ML intern"];
 
 const chip = (on: boolean) =>
   `border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] transition ${
@@ -317,7 +317,7 @@ export function JobFeed() {
 
           <details className="border border-line p-4">
             <summary className="label cursor-pointer">
-              {sources.length} sources · {boards.length} company boards · {lists.length} GitHub lists
+              {sources.length} sources · {boards.length} company career sites · {lists.length} GitHub lists
             </summary>
             <ul className="mt-3 max-h-72 space-y-1.5 overflow-y-auto text-sm">
               {[...lists, ...boards].map((s) => (

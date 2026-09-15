@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -53,7 +54,8 @@ public class BoardFetcher {
             case LEVER -> lever(get("https://api.lever.co/v0/postings/" + slug + "?mode=json"), company);
             case ASHBY -> ashby(get("https://api.ashbyhq.com/posting-api/job-board/" + slug), company);
             case SMARTRECRUITERS -> smartRecruiters(slug, company);
-            case GITHUB_LIST -> throw new IllegalArgumentException("GitHub lists are read through the GitHub client");
+            case WORKDAY -> workday(slug, company);
+            case GITHUB_LIST, GOOGLE_SEARCH -> throw new IllegalArgumentException(source.getType() + " isn't a job board");
         };
     }
 
@@ -132,6 +134,125 @@ public class BoardFetcher {
             }
         }
         return out;
+    }
+
+    static final int WORKDAY_PAGE = 20;
+    static final int WORKDAY_MAX = 400;
+    static final String WORKDAY_COUNTRY = "India";
+
+    /**
+     * Workday's career sites all answer the same JSON search. A site lists thousands of roles worldwide, so we ask
+     * for India only: through the site's own country filter when it has one (exact), else by searching "India" and
+     * keeping what reads as India.
+     */
+    private List<FetchedPosting> workday(String slug, String company) {
+        String[] parts = slug.split("\\|");
+        if (parts.length != 3) {
+            throw new BoardFetchException("Workday slug must be host|tenant|site, got " + slug);
+        }
+        String host = parts[0];
+        String site = parts[2];
+        String url = "https://" + host + "/wday/cxs/" + parts[1] + "/" + site + "/jobs";
+
+        JsonNode first = postJson(url, workdayBody(null, WORKDAY_COUNTRY, 0));
+        Map.Entry<String, String> facet = indiaFacet(first);
+        boolean exact = facet != null;
+        JsonNode page = exact ? postJson(url, workdayBody(facet, "", 0)) : first;
+
+        List<FetchedPosting> out = new ArrayList<>();
+        int total = page.path("total").asInt();
+        for (int offset = 0; offset < Math.min(total, WORKDAY_MAX); offset += WORKDAY_PAGE) {
+            if (offset > 0) {
+                page = postJson(url, workdayBody(facet, exact ? "" : WORKDAY_COUNTRY, offset));
+            }
+            List<FetchedPosting> batch = workdayJobs(page, host, site, company, exact);
+            out.addAll(batch);
+            if (page.path("jobPostings").size() < WORKDAY_PAGE) {
+                break;
+            }
+        }
+        return out;
+    }
+
+    private Map<String, Object> workdayBody(Map.Entry<String, String> facet, String searchText, int offset) {
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("appliedFacets", facet == null ? Map.of() : Map.of(facet.getKey(), List.of(facet.getValue())));
+        body.put("limit", WORKDAY_PAGE);
+        body.put("offset", offset);
+        body.put("searchText", searchText);
+        return body;
+    }
+
+    /**
+     * Finds the filter value meaning exactly "India". Tenants differ: Citi has a top-level "Country_and_Jurisdiction"
+     * facet, NVIDIA nests "locationHierarchy1" inside "locationMainGroup". Site-level values ("India, Pune") are
+     * skipped — one country value covers them all.
+     */
+    static Map.Entry<String, String> indiaFacet(JsonNode page) {
+        for (JsonNode f : page.path("facets")) {
+            Map.Entry<String, String> hit = indiaIn(f);
+            if (hit != null) {
+                return hit;
+            }
+        }
+        return null;
+    }
+
+    /** One facet, or a group of facets (values that themselves have values). */
+    private static Map.Entry<String, String> indiaIn(JsonNode facet) {
+        String param = text(facet.path("facetParameter"));
+        String p = param.toLowerCase(Locale.ROOT);
+        for (JsonNode v : facet.path("values")) {
+            if (v.has("values")) {
+                Map.Entry<String, String> nested = indiaIn(v);
+                if (nested != null) {
+                    return nested;
+                }
+            } else if ((p.contains("country") || p.contains("hierarchy"))
+                    && WORKDAY_COUNTRY.equalsIgnoreCase(text(v.path("descriptor")))) {
+                return Map.entry(param, text(v.path("id")));
+            }
+        }
+        return null;
+    }
+
+    static List<FetchedPosting> workdayJobs(JsonNode page, String host, String site, String company, boolean allIndia) {
+        List<FetchedPosting> out = new ArrayList<>();
+        for (JsonNode j : page.path("jobPostings")) {
+            String path = text(j.path("externalPath"));
+            if (path.isBlank()) {
+                continue;
+            }
+            String location = text(j.path("locationsText"));
+            // "3 Locations" says nothing; the job path usually starts with the primary location instead.
+            if (location.matches("\\d+ Locations?")) {
+                location = path.replaceFirst("^/job/([^/]+)/.*", "$1").replace('-', ' ');
+            }
+            Places.Place place = Places.of(location);
+            String country = allIndia ? "IN" : place.country();
+            if (!allIndia && !"IN".equals(country)) {
+                continue; // text search for "India" also matches Indianapolis and "Indiana"
+            }
+            String age = text(j.path("postedOn"));
+            out.add(new FetchedPosting(company, text(j.path("title")), location, country, place.remote(),
+                    "https://" + host + "/en-US/" + site + path, false, clip(age.replace("Posted ", ""), 20),
+                    Instant.now().minus(JobFeedService.ageOf(age.toLowerCase(Locale.ROOT).replace("30+", "30"))), false));
+        }
+        return out;
+    }
+
+    private JsonNode postJson(String url, Object body) {
+        try {
+            String res = http.post().uri(url).contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(body).retrieve().body(String.class);
+            return mapper.readTree(res == null ? "null" : res);
+        } catch (RestClientException | java.io.IOException e) {
+            throw new BoardFetchException(url + ": " + e.getMessage());
+        }
+    }
+
+    private static String clip(String s, int max) {
+        return s == null || s.length() <= max ? s : s.substring(0, max);
     }
 
     static List<FetchedPosting> smartRecruiters(JsonNode root, String slug, String company) {

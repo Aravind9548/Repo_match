@@ -36,6 +36,16 @@ class JobQueryTest {
     }
 
     @Test
+    void seasonsAreSearchable() {
+        JobQuery q = JobQuery.parse("summer internship india", null);
+        assertThat(q.kind()).isEqualTo(JobKind.INTERNSHIP);
+        assertThat(q.country()).isEqualTo("IN");
+        assertThat(q.describe()).isEqualTo("internships · in India · “summer”");
+        assertThat(SearchText.matches("sde intern summer 2027 bengaluru", q.concepts().getFirst())).isTrue();
+        assertThat(JobQuery.parse("6 month intern", null).concepts().getFirst()).contains("6-month");
+    }
+
+    @Test
     void locationFieldAcceptsCountriesCitiesAndUnknownPlaces() {
         assertThat(JobQuery.parse("", "India").country()).isEqualTo("IN");
         assertThat(JobQuery.parse("", "gurgaon").cityAliases()).contains("gurugram");

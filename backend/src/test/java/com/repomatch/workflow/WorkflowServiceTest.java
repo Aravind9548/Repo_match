@@ -67,7 +67,7 @@ class WorkflowServiceTest {
     @BeforeEach
     void setUp() {
         AppProperties props = new AppProperties(null, null, new AppProperties.Analysis(2, 10, 3, 12, 100),
-                new AppProperties.Limits(5, 50), null, null);
+                new AppProperties.Limits(5, 50), null, null, null);
         service = new WorkflowService(sync, repos, accounts, workflows, pipeline, usage, props);
 
         GithubAccount account = new GithubAccount();

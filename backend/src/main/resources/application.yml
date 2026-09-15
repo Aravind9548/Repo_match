@@ -74,6 +74,20 @@ repomatch:
     mail-from: ${MAIL_FROM:}
     cron-secret: ${JOBS_CRON_SECRET:}
     link-secret: ${TRACKER_LINK_SECRET:}
+  # Once a day (on the scheduled refresh), Google searches for India internships beyond the synced boards.
+  # Each query is one grounded Gemini call, so the list is short and capped.
+  discovery:
+    enabled: ${DISCOVERY_ENABLED:false}
+    max-queries-per-run: ${DISCOVERY_MAX_QUERIES:8}
+    queries:
+      - software engineering summer internship 2027 India apply
+      - winter internship 2026 India software developer
+      - SDE intern Bengaluru apply now
+      - software developer intern Hyderabad apply now
+      - software engineer intern Pune OR Chennai OR Gurugram OR Noida
+      - data science OR machine learning internship India 2026
+      - off campus internship India engineering students 2027 batch
+      - 6 month internship India software engineering 2026
 
 management:
   endpoints:
