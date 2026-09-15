@@ -480,8 +480,10 @@ export type TailorEdit = {
   reason: string;
   /** Words the new wording adds that appear nowhere on the resume. */
   new_terms: string[];
-  /** True when those words look like skills or tools the resume never claimed. */
+  /** True when those words look like skills or tools the resume never claimed, or were lifted from the job ad. */
   unsupported: boolean;
+  /** New words copied from the job description rather than from the resume. */
+  from_job_ad: string[];
 };
 
 export type TailorPlan = {

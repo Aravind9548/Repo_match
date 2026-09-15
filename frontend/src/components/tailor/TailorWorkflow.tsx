@@ -301,8 +301,17 @@ function ReviewEdits({
                   <p className="mt-2 text-xs text-accent-2">Why: {e.reason}</p>
                   {e.unsupported && (
                     <p className="mt-3 border border-amber/40 bg-amber-soft px-3 py-2 text-xs leading-relaxed text-body">
-                      ⚠ Adds <strong>{e.new_terms.join(", ")}</strong>, which isn&apos;t on your resume. Keep it only if
-                      it&apos;s true and you can talk about it in an interview.
+                      {e.from_job_ad.length > 0 ? (
+                        <>
+                          ⚠ <strong>{e.from_job_ad.join(", ")}</strong> comes from the job ad, not your resume. Keep it
+                          only if it honestly describes what you did.
+                        </>
+                      ) : (
+                        <>
+                          ⚠ Adds <strong>{e.new_terms.join(", ")}</strong>, which isn&apos;t on your resume. Keep it only
+                          if it&apos;s true and you can talk about it in an interview.
+                        </>
+                      )}
                     </p>
                   )}
                 </div>

@@ -67,6 +67,18 @@ def test_ordinary_rewording_isnt_flagged_but_new_tools_are():
     assert r.check_plan(sample(), plan)[0].unsupported is False
 
 
+def test_wording_lifted_from_the_job_ad_is_flagged():
+    plan = r.TailorPlan(summary="s", edits=[
+        r.TailorEdit(section="Projects", before="Built a chat app with WebSockets and Redis",
+                     after="Solved bottlenecks by building a chat app with WebSockets and Redis", reason="x"),
+    ])
+    jd = "You will identify and solve performance bottlenecks in distributed systems."
+    edit = r.check_plan(sample(), plan, jd)[0]
+    assert edit.unsupported is True and "bottlenecks" in edit.from_job_ad
+    # Without the JD it's just a new lowercase word.
+    assert r.check_plan(sample(), plan)[0].unsupported is False
+
+
 def test_apply_and_render_escapes_latex():
     resume = sample()
     resume.sections[1].lines = ["C++, C#, 100% & more_things"]

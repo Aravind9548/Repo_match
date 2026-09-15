@@ -175,8 +175,10 @@ class CheckedEdit(TailorEdit):
     id: int
     # Terms the new wording introduces that appear nowhere in the original resume.
     new_terms: list[str] = []
-    # True when new_terms look like claims (skills/tools) rather than ordinary words.
+    # True when new_terms look like claims: a skill or tool name, or wording lifted from the job ad.
     unsupported: bool = False
+    # The subset of new_terms copied from the job description rather than from the resume.
+    from_job_ad: list[str] = []
 
 
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9+#./-]*")
@@ -226,10 +228,15 @@ def _looks_like_claim(term: str, first_word: bool = False) -> bool:
     return term[:1].isupper() and not first_word
 
 
-def check_plan(resume: Resume, plan: TailorPlan) -> list[CheckedEdit]:
-    """Keeps edits whose `before` really is resume text, and flags wording that adds unstated claims."""
+def check_plan(resume: Resume, plan: TailorPlan, job_description: str = "") -> list[CheckedEdit]:
+    """Keeps edits whose `before` really is resume text, and flags wording that adds unstated claims.
+
+    Two kinds of new wording get flagged: names that look like skills or tools, and substantive words that appear in
+    the job ad but nowhere on the resume ("Solved API bottlenecks" when the JD asks for "solving bottlenecks") —
+    that's the job describing itself, not the person."""
     allowed = {re.sub(r"\s+", " ", s).strip(): s for s in resume_strings(resume)}
     all_text = resume_text(resume)
+    jd_words = {_norm(w) for w in _WORD.findall(job_description or "")}
     checked: list[CheckedEdit] = []
     seen: set[str] = set()
     for e in plan.edits:
@@ -239,6 +246,7 @@ def check_plan(resume: Resume, plan: TailorPlan) -> list[CheckedEdit]:
         seen.add(key)
         terms = introduced_terms(e.before, e.after, all_text)
         first = (_WORD.findall(e.after) or [""])[0].strip(".,;:()")
+        echoed = [t for t in terms if len(_norm(t)) >= 5 and _norm(t) in jd_words]
         checked.append(
             CheckedEdit(
                 id=len(checked) + 1,
@@ -247,7 +255,8 @@ def check_plan(resume: Resume, plan: TailorPlan) -> list[CheckedEdit]:
                 after=e.after.strip(),
                 reason=e.reason,
                 new_terms=terms,
-                unsupported=any(_looks_like_claim(t, first_word=(t == first)) for t in terms),
+                unsupported=bool(echoed) or any(_looks_like_claim(t, first_word=(t == first)) for t in terms),
+                from_job_ad=echoed,
             )
         )
     return checked[:12]

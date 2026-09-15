@@ -249,7 +249,7 @@ async def resume_tailor(req: TailorRequest, ai: resumes.ResumeAi = Depends(get_r
         plan, usage = await ai.tailor(req.resume, req.job_description, req.job_title)
     except _UPSTREAM_ERRORS as e:
         raise _upstream_error(e) from e
-    checked = resumes.check_plan(req.resume, plan)
+    checked = resumes.check_plan(req.resume, plan, req.job_description)
     return TailorResponse(
         summary=plan.summary,
         edits=checked,
