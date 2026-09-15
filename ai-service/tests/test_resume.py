@@ -48,6 +48,25 @@ def test_check_plan_keeps_real_edits_and_flags_invented_skills():
     assert edits[1].unsupported is True and "Kubernetes" in edits[1].new_terms
 
 
+def test_ordinary_rewording_isnt_flagged_but_new_tools_are():
+    text = "Flask service in Python with Redis and a Node.js backend"
+    terms = r.introduced_terms("x", "Tested and fixed bugs in a Python-based back-end service", text)
+    # Hyphen variants of words already on the resume aren't new; plain new words aren't claims.
+    assert "Python-based" not in terms and "back-end" not in terms
+    assert not any(r._looks_like_claim(t, first_word=(t == "Tested")) for t in terms)
+    assert r._looks_like_claim("Tested", first_word=True) is False
+    assert r._looks_like_claim("NoSQL") is True
+    assert r._looks_like_claim("Kubernetes") is True
+    assert r._looks_like_claim("CI/CD") is True
+    assert r._looks_like_claim("knowledge") is False
+
+    plan = r.TailorPlan(summary="s", edits=[
+        r.TailorEdit(section="Projects", before="Built a chat app with WebSockets and Redis",
+                     after="Designed a real-time chat app with WebSockets and Redis", reason="x"),
+    ])
+    assert r.check_plan(sample(), plan)[0].unsupported is False
+
+
 def test_apply_and_render_escapes_latex():
     resume = sample()
     resume.sections[1].lines = ["C++, C#, 100% & more_things"]

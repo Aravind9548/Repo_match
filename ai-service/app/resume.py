@@ -135,8 +135,17 @@ You must never:
 - Change dates, titles, companies, schools or numbers.
 - Touch contact details.
 
+Write like a strong engineer describing their own work, not like a keyword list:
+- Plain, specific, active wording ("Built", "Designed", "Cut"), one idea per bullet, no longer than the original \
+plus a few words.
+- Never bolt job-ad jargon onto a bullet ("a back-end framework (Spring Boot)", "a Relational Database (MySQL)"). \
+Name the real tool the resume already names; the recruiter's filter matches that.
+- Don't capitalise generic words, don't add filler ("Shared knowledge by..."), and don't swap a precise verb for a \
+vaguer one.
+- If a bullet is already clear and relevant, leave it alone. Fewer, better edits beat many small ones.
+
 For each edit, "before" must be copied character-for-character from one bullet or line of the resume. Make at most \
-12 edits and only where they genuinely help for this job. List job requirements the resume already shows in \
+8 edits and only where they genuinely help for this job. List job requirements the resume already shows in \
 matched_keywords, and requirements it doesn't show in missing_keywords — those are gaps for the person, not text \
 to insert.
 """
@@ -182,22 +191,39 @@ _COMMON = set(
 )
 
 
+def _norm(word: str) -> str:
+    """"Back-end" and "backend", "APIs" and "API" are the same word for this check."""
+    w = word.lower().strip(".,;:()").replace("-", "")
+    return w[:-1] if len(w) > 3 and w.endswith("s") else w
+
+
 def introduced_terms(before: str, after: str, resume_all_text: str) -> list[str]:
-    """Words in `after` that appear neither in `before` nor anywhere else in the resume."""
-    known = {w.lower() for w in _WORD.findall(resume_all_text)} | {w.lower() for w in _WORD.findall(before)}
+    """Words in `after` that appear neither in `before` nor anywhere else on the resume."""
+    known: set[str] = set()
+    for w in _WORD.findall(resume_all_text) + _WORD.findall(before):
+        known.add(_norm(w))
+        known.update(_norm(part) for part in w.split("-") if part)
     out: list[str] = []
     for w in _WORD.findall(after):
-        lw = w.lower().strip(".")
-        if len(lw) < 2 or lw in known or lw in _COMMON or lw.rstrip("s") in known or lw + "s" in known:
+        parts = [w] + [p for p in w.split("-") if p]
+        # "Python-based" is fine when Python is on the resume and "based" is ordinary.
+        if all(_norm(p) in known or _norm(p) in _COMMON or len(_norm(p)) < 2 for p in parts[1:] or parts):
             continue
-        if lw not in (x.lower() for x in out):
-            out.append(w.strip("."))
+        if _norm(w) in known or _norm(w) in _COMMON or len(_norm(w)) < 2:
+            continue
+        if _norm(w) not in (_norm(x) for x in out):
+            out.append(w.strip(".,;:()"))
     return out
 
 
-def _looks_like_claim(term: str) -> bool:
-    # Tools and skills tend to be capitalised, acronyms, or carry +#./ (C++, Node.js, CI/CD).
-    return term[:1].isupper() or term.isupper() or any(c in term for c in "+#./") or any(c.isdigit() for c in term)
+def _looks_like_claim(term: str, first_word: bool = False) -> bool:
+    """Tools and skills look like names: acronyms (AWS), inner capitals (NoSQL), symbols (C++, Node.js, CI/CD),
+    digits (S3), or a capital letter mid-sentence. A capitalised first word ("Tested") is just a sentence start."""
+    if any(c in term for c in "+#/") or any(c.isdigit() for c in term) or re.search(r"\w\.\w", term):
+        return True
+    if len(term) > 1 and (term.isupper() or any(c.isupper() for c in term[1:])):
+        return True
+    return term[:1].isupper() and not first_word
 
 
 def check_plan(resume: Resume, plan: TailorPlan) -> list[CheckedEdit]:
@@ -212,6 +238,7 @@ def check_plan(resume: Resume, plan: TailorPlan) -> list[CheckedEdit]:
             continue
         seen.add(key)
         terms = introduced_terms(e.before, e.after, all_text)
+        first = (_WORD.findall(e.after) or [""])[0].strip(".,;:()")
         checked.append(
             CheckedEdit(
                 id=len(checked) + 1,
@@ -220,7 +247,7 @@ def check_plan(resume: Resume, plan: TailorPlan) -> list[CheckedEdit]:
                 after=e.after.strip(),
                 reason=e.reason,
                 new_terms=terms,
-                unsupported=any(_looks_like_claim(t) for t in terms),
+                unsupported=any(_looks_like_claim(t, first_word=(t == first)) for t in terms),
             )
         )
     return checked[:12]
@@ -358,7 +385,7 @@ PREAMBLE = r"""\documentclass[11pt,a4paper]{article}
 \definecolor{accent}{HTML}{1F3A93}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
-\titleformat{\section}{\large\bfseries\color{accent}}{}{0em}{}[\vspace{-6pt}\rule{\linewidth}{0.4pt}]
+\titleformat{\section}{\large\bfseries\color{accent}}{}{0em}{}[\vspace{-6pt}{\color{accent}\rule{\linewidth}{0.4pt}}]
 \titlespacing*{\section}{0pt}{10pt}{5pt}
 \setlist[itemize]{leftmargin=1.2em, itemsep=0.5pt, topsep=1pt, parsep=0pt, partopsep=0pt}
 \newcommand{\entry}[2]{\par\noindent\textbf{#1}\hfill #2\par}

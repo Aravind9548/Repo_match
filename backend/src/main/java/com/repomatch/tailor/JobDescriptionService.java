@@ -155,7 +155,21 @@ public class JobDescriptionService {
                 }
             }
         }
-        String visible = htmlToText(html.replaceAll("(?is)<(script|style|nav|header|footer|svg|noscript)[^>]*>.*?</\\1>", " "));
+        String cleaned = html.replaceAll("(?is)<(script|style|nav|header|footer|svg|noscript|aside|form)[^>]*>.*?</\\1>", " ");
+        // The posting itself usually sits in <main>/<article> or a "description" block; site chrome is around it.
+        for (String pattern : List.of(
+                "(?is)<[a-z]+[^>]+(?:class|id)=\"[^\"]*(?:job-?description|jobdescription|description__text|posting-description)[^\"]*\"[^>]*>(.*)",
+                "(?is)<main[^>]*>(.*?)</main>",
+                "(?is)<article[^>]*>(.*?)</article>")) {
+            Matcher block = Pattern.compile(pattern).matcher(cleaned);
+            if (block.find()) {
+                String text = htmlToText(block.group(1));
+                if (text.length() > 400) {
+                    return text;
+                }
+            }
+        }
+        String visible = htmlToText(cleaned);
         return visible.length() > 400 ? visible : null;
     }
 
@@ -178,7 +192,7 @@ public class JobDescriptionService {
                 .replaceAll("(?i)</(p|div|li|h[1-6]|tr|ul|ol)>", "\n")
                 .replaceAll("(?i)<li[^>]*>", "• ")
                 .replaceAll("<[^>]+>", " ");
-        s = unescape(s);
+        s = unescape(s).replaceAll("&#?[a-zA-Z0-9]+;", " ").replace("\uFFFD", " ");
         return s.replaceAll("[ \\t\\x0B\\f\\r]+", " ").replaceAll(" *\n *", "\n").replaceAll("\n{3,}", "\n\n").strip();
     }
 
