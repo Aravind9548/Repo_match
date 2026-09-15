@@ -468,7 +468,8 @@ export const webSearchJobs = (body: { q: string; location: string; kind: JobKind
 
 export type ResumeDoc = { id: number; filename: string; kind: "TEX" | "TEXT"; chars: number; read: boolean; createdAt: string };
 
-export type ResumeItem = { title: string; subtitle: string; date: string; location: string; bullets: string[] };
+export type ResumeLink = { label: string; url: string };
+export type ResumeItem = { title: string; subtitle: string; date: string; location: string; bullets: string[]; links: ResumeLink[] };
 export type ResumeSection = { title: string; kind: string; items: ResumeItem[]; lines: string[] };
 export type ResumeData = { name: string; headline: string; contact: string[]; sections: ResumeSection[] };
 
@@ -484,15 +485,38 @@ export type TailorEdit = {
   unsupported: boolean;
   /** New words copied from the job description rather than from the resume. */
   from_job_ad: string[];
+  /** "github" when the edit uses a detail from one of the person's repositories. */
+  source: "resume" | "github";
+  repo: string;
+  repo_url: string;
+  /** Words copied from that repository, proving the detail. */
+  evidence: string;
 };
+
+export type TailorSwap = {
+  id: number;
+  section: string;
+  replace_title: string;
+  repo: string;
+  repo_url: string;
+  new_item: ResumeItem;
+  reason: string;
+  new_terms: string[];
+  unsupported: boolean;
+};
+
+export type TailorLinkAddition = { id: number; section: string; item_title: string; repo: string; url: string };
 
 export type TailorPlan = {
   summary: string;
   edits: TailorEdit[];
   reorder: { section: string; item_titles: string[] }[];
+  swaps: TailorSwap[];
+  link_additions: TailorLinkAddition[];
   matched_keywords: string[];
   missing_keywords: string[];
   dropped_edits: number;
+  repos_used: string[];
   model: string;
 };
 
@@ -515,8 +539,22 @@ export type TailorRun = {
   compileLog: string | null;
   usedOwnTemplate: boolean;
   missedEdits: number[];
+  githubUsername: string | null;
+  instructions: string | null;
+  onePage: boolean;
+  model: "pro" | "flash" | null;
+  pages: number | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type SuggestOptions = {
+  resume: ResumeData | null;
+  jobDescription: string;
+  githubUsername: string;
+  instructions: string;
+  onePage: boolean;
+  model: "pro" | "flash";
 };
 
 export const listResumes = (key: string) => request<ResumeDoc[]>("/api/tailor/resumes", keyed(key));
@@ -533,7 +571,7 @@ export const getTailorRun = (key: string, id: string) => request<TailorRun>(`/ap
 export const tailorRunsForApplication = (key: string, applicationId: number) =>
   request<TailorRun[]>(`/api/tailor/applications/${applicationId}/runs`, keyed(key));
 /** Paid: one Gemini call proposing edits. */
-export const suggestEdits = (key: string, id: string, body: { resume: ResumeData | null; jobDescription: string }) =>
+export const suggestEdits = (key: string, id: string, body: SuggestOptions) =>
   request<TailorRun>(`/api/tailor/runs/${id}/suggest`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
 export const buildTailored = (key: string, id: string, body: { acceptedIds: number[]; keepOrder: boolean }) =>
   request<TailorRun>(`/api/tailor/runs/${id}/build`, keyed(key, { method: "POST", body: JSON.stringify(body) }));

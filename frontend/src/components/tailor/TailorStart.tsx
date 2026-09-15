@@ -101,6 +101,12 @@ export function TailorStart({ applicationId, postingId }: { applicationId?: numb
       </div>
 
       <div key={mode} className="animate-rise">
+        {mode === "saved" && saved.some((d) => d.kind === "TEXT" && new Date(d.createdAt) < new Date("2026-09-16T00:00:00Z")) && (
+          <p className="mb-3 border border-amber/40 bg-amber-soft px-4 py-3 text-sm text-body">
+            Uploaded a PDF before 16 Sep? Upload it again — the earlier reader dropped spaces next to bold text and your
+            links. The new one keeps both.
+          </p>
+        )}
         {mode === "saved" && (
           <ul className="space-y-2">
             {saved.map((d) => (
@@ -163,7 +169,8 @@ export function TailorStart({ applicationId, postingId }: { applicationId?: numb
             <p className="text-lg text-ink">{file ? file.name : "Drop your resume here, or click to choose"}</p>
             <p className="label mt-3">PDF · DOCX · TEX · TXT — up to 3 MB</p>
             <p className="mt-4 max-w-md text-sm text-muted">
-              Upload the .tex if you have it: your own layout is kept and only the wording changes.
+              PDFs keep their bold labels and links. Upload the .tex if you have it: your exact layout is kept and
+              only the wording changes.
             </p>
           </div>
         )}

@@ -93,13 +93,19 @@ public class TailorController {
         return tailor.forApplication(keys.resolve(key), applicationId);
     }
 
-    public record SuggestBody(JsonNode resume, @Size(max = 40_000) String jobDescription) {
+    public record SuggestBody(JsonNode resume, @Size(max = 40_000) String jobDescription,
+                              @jakarta.validation.constraints.Pattern(regexp = "^$|^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$",
+                                      message = "must be a valid GitHub username") String githubUsername,
+                              @Size(max = 2000) String instructions, Boolean onePage,
+                              @jakarta.validation.constraints.Pattern(regexp = "^(pro|flash)?$") String model) {
     }
 
     @PostMapping("/runs/{id}/suggest")
     public TailorService.RunView suggest(@RequestHeader(JobsController.KEY_HEADER) String key, @PathVariable UUID id,
                                          @Valid @RequestBody SuggestBody body, HttpServletRequest http) {
-        return tailor.suggest(keys.resolve(key), id, body.resume(), body.jobDescription(), http.getRemoteAddr());
+        return tailor.suggest(keys.resolve(key), id, new TailorService.SuggestInput(body.resume(), body.jobDescription(),
+                body.githubUsername(), body.instructions(), body.onePage() == null || body.onePage(), body.model()),
+                http.getRemoteAddr());
     }
 
     public record BuildBody(List<Integer> acceptedIds, boolean keepOrder) {

@@ -37,6 +37,11 @@ public class TailorRunEntity {
     private String compileLog;
     private boolean usedOwnTemplate;
     private String missedEdits;
+    private String githubUsername;
+    private String instructions;
+    private boolean onePage = true;
+    private String model;
+    private Integer pages;
     private Instant createdAt;
     private Instant updatedAt;
     @Version
@@ -78,6 +83,16 @@ public class TailorRunEntity {
     public void setUsedOwnTemplate(boolean usedOwnTemplate) { this.usedOwnTemplate = usedOwnTemplate; }
     public String getMissedEdits() { return missedEdits; }
     public void setMissedEdits(String missedEdits) { this.missedEdits = missedEdits; }
+    public String getGithubUsername() { return githubUsername; }
+    public void setGithubUsername(String githubUsername) { this.githubUsername = githubUsername; }
+    public String getInstructions() { return instructions; }
+    public void setInstructions(String instructions) { this.instructions = instructions; }
+    public boolean isOnePage() { return onePage; }
+    public void setOnePage(boolean onePage) { this.onePage = onePage; }
+    public String getModel() { return model; }
+    public void setModel(String model) { this.model = model; }
+    public Integer getPages() { return pages; }
+    public void setPages(Integer pages) { this.pages = pages; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

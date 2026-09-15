@@ -18,7 +18,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.repomatch.ai.AiServiceClient;
+import com.repomatch.analysis.MatchPipeline;
 import com.repomatch.analysis.UsageGuard;
+import com.repomatch.repo.RepoEntity;
+import com.repomatch.repo.RepoSyncService;
 import com.repomatch.jobs.JobFeedService;
 import com.repomatch.tracker.ApplicationRepository;
 import com.repomatch.tracker.ResumeChoice;
@@ -43,6 +46,9 @@ import com.repomatch.tracker.TrackerService;
 public class TailorService {
 
     static final int MAX_UPLOAD_BYTES = 3_000_000;
+    /** Repositories whose READMEs are shown to the model: the most job-relevant few, to keep the prompt focused. */
+    static final int EVIDENCE_REPOS = 6;
+    static final int README_CHARS = 2_500;
 
     private final ResumeDocRepository resumes;
     private final TailorRunRepository runs;
@@ -53,10 +59,15 @@ public class TailorService {
     private final AiServiceClient ai;
     private final UsageGuard usage;
     private final ObjectMapper mapper;
+    private final RepoSyncService repoSync;
+    private final MatchPipeline pipeline;
 
     public TailorService(ResumeDocRepository resumes, TailorRunRepository runs, ApplicationRepository applications,
                          JobFeedService feed, JobDescriptionService descriptions, TrackerService tracker,
-                         AiServiceClient ai, UsageGuard usage, ObjectMapper mapper) {
+                         AiServiceClient ai, UsageGuard usage, ObjectMapper mapper, RepoSyncService repoSync,
+                         MatchPipeline pipeline) {
+        this.repoSync = repoSync;
+        this.pipeline = pipeline;
         this.resumes = resumes;
         this.runs = runs;
         this.applications = applications;
@@ -115,7 +126,14 @@ public class TailorService {
     public record RunView(UUID id, TailorRunEntity.Step step, Long applicationId, Long postingId, ResumeView resume,
                           String company, String jobTitle, String jobDescription, JsonNode resumeData, JsonNode plan,
                           List<Integer> acceptedIds, boolean compiled, boolean hasPdf, String compileLog,
-                          boolean usedOwnTemplate, List<Integer> missedEdits, Instant createdAt, Instant updatedAt) {
+                          boolean usedOwnTemplate, List<Integer> missedEdits, String githubUsername,
+                          String instructions, boolean onePage, String model, Integer pages, Instant createdAt,
+                          Instant updatedAt) {
+    }
+
+    /** What the person asks for at the check step, alongside the (possibly corrected) resume and job description. */
+    public record SuggestInput(JsonNode resume, String jobDescription, String githubUsername, String instructions,
+                               boolean onePage, String model) {
     }
 
     /**
@@ -176,32 +194,46 @@ public class TailorService {
 
     /** Gate 1 → 2: the person has checked the resume and job description (and may have corrected either). */
     @Transactional
-    public RunView suggest(String owner, UUID id, JsonNode correctedResume, String jobDescription, String clientKey) {
+    public RunView suggest(String owner, UUID id, SuggestInput in, String clientKey) {
         TailorRunEntity run = owned(owner, id);
         requireStep(run, TailorRunEntity.Step.REVIEW_RESUME);
-        if (jobDescription == null || jobDescription.strip().length() < 40) {
+        if (in.jobDescription() == null || in.jobDescription().strip().length() < 40) {
             throw new IllegalArgumentException("Add the job description (at least a few lines) so the edits fit this job.");
         }
-        if (correctedResume != null && correctedResume.has("sections")) {
-            run.setStructured(correctedResume.toString());
+        if (in.resume() != null && in.resume().has("sections")) {
+            run.setStructured(in.resume().toString());
         }
-        run.setJobDescription(jobDescription.strip());
+        run.setJobDescription(in.jobDescription().strip());
+        run.setGithubUsername(in.githubUsername() == null || in.githubUsername().isBlank() ? null : in.githubUsername().strip());
+        run.setInstructions(in.instructions() == null || in.instructions().isBlank() ? null : in.instructions().strip());
+        run.setOnePage(in.onePage());
+        run.setModel("flash".equals(in.model()) ? "flash" : "pro");
 
         usage.acquireLlmCall(clientKey);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("resume", json(run.getStructured()));
         body.put("job_title", run.getJobTitle() == null ? "" : run.getJobTitle());
         body.put("job_description", run.getJobDescription());
+        body.put("instructions", run.getInstructions() == null ? "" : run.getInstructions());
+        body.put("one_page", run.isOnePage());
+        body.put("model", run.getModel());
+        if (run.getGithubUsername() != null) {
+            Repos repos = githubEvidence(run.getGithubUsername(), run.getJobDescription());
+            body.put("repos", repos.evidence());
+            body.put("link_repos", repos.all());
+        }
         JsonNode plan = ai.resume("tailor", body);
 
         run.setPlan(plan.toString());
-        // Honest edits start accepted; anything that adds an unstated term waits for the person to opt in.
+        // Honest edits and missing GitHub links start accepted; anything flagged, and every project swap, waits for
+        // the person to opt in.
         List<Integer> accepted = new ArrayList<>();
         plan.path("edits").forEach(e -> {
             if (!e.path("unsupported").asBoolean(false)) {
                 accepted.add(e.path("id").asInt());
             }
         });
+        plan.path("link_additions").forEach(l -> accepted.add(l.path("id").asInt()));
         run.setAcceptedIds(write(accepted));
         clearBuild(run);
         run.setStep(TailorRunEntity.Step.REVIEW_EDITS);
@@ -225,12 +257,27 @@ public class TailorService {
                         .put("reason", e.path("reason").asText()));
             }
         });
+        ArrayNode swaps = mapper.createArrayNode();
+        plan.path("swaps").forEach(s -> {
+            if (keep.contains(s.path("id").asInt())) {
+                swaps.add(s);
+            }
+        });
+        ArrayNode links = mapper.createArrayNode();
+        plan.path("link_additions").forEach(l -> {
+            if (keep.contains(l.path("id").asInt())) {
+                links.add(l);
+            }
+        });
 
         ResumeDocEntity doc = run.getResumeId() == null ? null : resumes.findById(run.getResumeId()).orElse(null);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("resume", json(run.getStructured()));
         body.put("edits", edits);
         body.put("reorder", keepOrder ? mapper.createArrayNode() : plan.path("reorder"));
+        body.put("swaps", swaps);
+        body.put("link_additions", links);
+        body.put("one_page", run.isOnePage());
         body.put("source_tex", doc != null && ResumeDocEntity.TEX.equals(doc.getKind()) ? doc.getSourceText() : null);
         JsonNode built = ai.resume("build", body);
 
@@ -240,6 +287,7 @@ public class TailorService {
         run.setCompileLog(built.path("compile_log").asText(""));
         run.setUsedOwnTemplate(built.path("used_own_template").asBoolean(false));
         run.setMissedEdits(built.path("missed_edits").toString());
+        run.setPages(built.path("pages").asInt(0));
         String pdf = built.path("pdf_base64").asText("");
         run.setPdf(pdf.isBlank() ? null : Base64.getDecoder().decode(pdf));
         run.setStep(TailorRunEntity.Step.DONE);
@@ -263,6 +311,46 @@ public class TailorService {
             clearBuild(run);
         }
         return save(run);
+    }
+
+    private record Repos(List<Map<String, Object>> evidence, List<Map<String, Object>> all) {
+    }
+
+    /**
+     * The person's repositories as evidence: all of them (names and links, so missing project links can be added) and
+     * the few most similar to this job with their READMEs. Similarity reuses Match's cached embeddings, so it's cheap.
+     */
+    private Repos githubEvidence(String username, String jobDescription) {
+        List<RepoEntity> owned;
+        try {
+            owned = MatchPipeline.eligible(repoSync.sync(username, false).repos(), false);
+        } catch (com.repomatch.github.GitHubUserNotFoundException e) {
+            throw new IllegalArgumentException("GitHub user \"" + username + "\" doesn't exist.");
+        }
+        List<Map<String, Object>> all = owned.stream().map(r -> repoMap(r, false)).toList();
+        if (owned.isEmpty()) {
+            return new Repos(List.of(), List.of());
+        }
+        Map<Long, RepoEntity> byId = MatchPipeline.index(owned);
+        List<Map<String, Object>> evidence = pipeline.rank(jobDescription, owned).results().stream()
+                .map(ranked -> byId.get(ranked.id()))
+                .filter(r -> r != null && ((r.getReadme() != null && r.getReadme().length() > 80) || r.getDescription() != null))
+                .limit(EVIDENCE_REPOS)
+                .map(r -> repoMap(r, true))
+                .toList();
+        return new Repos(evidence, all);
+    }
+
+    private static Map<String, Object> repoMap(RepoEntity r, boolean withReadme) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("name", r.getName());
+        m.put("url", r.getHtmlUrl());
+        m.put("description", r.getDescription() == null ? "" : r.getDescription());
+        m.put("languages", r.getLanguages() == null ? List.of() : r.getLanguages().entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()).map(Map.Entry::getKey).limit(5).toList());
+        String readme = withReadme && r.getReadme() != null ? r.getReadme() : "";
+        m.put("readme", readme.length() > README_CHARS ? readme.substring(0, README_CHARS) : readme);
+        return m;
     }
 
     public record Download(String filename, byte[] bytes, String contentType) {
@@ -316,6 +404,7 @@ public class TailorService {
         return new RunView(r.getId(), r.getStep(), r.getApplicationId(), r.getPostingId(), doc == null ? null : view(doc),
                 r.getCompany(), r.getJobTitle(), r.getJobDescription(), json(r.getStructured()), json(r.getPlan()),
                 accepted, r.isCompiled(), r.getPdf() != null, r.getCompileLog(), r.isUsedOwnTemplate(), missed,
+                r.getGithubUsername(), r.getInstructions(), r.isOnePage(), r.getModel(), r.getPages(),
                 r.getCreatedAt(), r.getUpdatedAt());
     }
 

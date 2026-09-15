@@ -178,6 +178,9 @@ async def websearch(req: WebSearchRequest, searcher: WebSearcher = Depends(get_w
 
 # --- Resume tailoring ---------------------------------------------------------
 
+# Models a person may pick for tailoring. Pro reasons more carefully; Flash is faster and cheaper.
+TAILOR_MODELS = {"pro": "gemini-3.1-pro-preview", "flash": "gemini-2.5-flash"}
+
 
 class ExtractRequest(BaseModel):
     filename: str = Field(max_length=300)
@@ -191,7 +194,7 @@ class ExtractResponse(BaseModel):
 
 @app.post("/resume/extract", response_model=ExtractResponse)
 def resume_extract(req: ExtractRequest) -> ExtractResponse:
-    """Reads text out of an uploaded PDF, DOCX, .tex or text file. No model involved."""
+    """Reads text out of an uploaded PDF, DOCX, .tex or text file, keeping bold and links. No model involved."""
     try:
         data = base64.b64decode(req.data_base64, validate=True)
     except (binascii.Error, ValueError) as e:
@@ -217,7 +220,7 @@ class StructureResponse(BaseModel):
 
 @app.post("/resume/structure", response_model=StructureResponse)
 async def resume_structure(req: StructureRequest, ai: resumes.ResumeAi = Depends(get_resume_ai)) -> StructureResponse:
-    """Turns resume text (or LaTeX) into sections, items and bullets, copied verbatim."""
+    """Turns resume text (or LaTeX) into sections, items and bullets, copied verbatim with bold and links."""
     try:
         resume, usage = await ai.structure(req.text)
     except _UPSTREAM_ERRORS as e:
@@ -229,35 +232,49 @@ class TailorRequest(BaseModel):
     resume: resumes.Resume
     job_title: str = Field(default="", max_length=300)
     job_description: str = Field(min_length=40, max_length=40_000)
+    # The person's most job-relevant repositories (evidence) and all of them (for adding missing links).
+    repos: list[resumes.RepoEvidence] = Field(default_factory=list, max_length=10)
+    link_repos: list[resumes.RepoEvidence] = Field(default_factory=list, max_length=200)
+    instructions: str = Field(default="", max_length=2000)
+    one_page: bool = True
+    model: str = Field(default="pro", pattern="^(pro|flash)$")
 
 
 class TailorResponse(BaseModel):
     summary: str
     edits: list[resumes.CheckedEdit]
+    swaps: list[resumes.CheckedSwap]
+    link_additions: list[resumes.LinkAddition]
     reorder: list[resumes.SectionOrder]
     matched_keywords: list[str]
     missing_keywords: list[str]
     dropped_edits: int
+    repos_used: list[str]
     model: str
     usage: TokenUsage | None = None
 
 
 @app.post("/resume/tailor", response_model=TailorResponse)
 async def resume_tailor(req: TailorRequest, ai: resumes.ResumeAi = Depends(get_resume_ai)) -> TailorResponse:
-    """Proposes edits for one job; every edit is checked against the resume before it's returned."""
+    """Proposes edits for one job from the resume and the person's repos; every edit is checked before it's returned."""
     try:
-        plan, usage = await ai.tailor(req.resume, req.job_description, req.job_title)
+        plan, usage, used = await ai.tailor(req.resume, req.job_description, req.job_title, req.repos,
+                                            req.instructions, req.one_page, TAILOR_MODELS[req.model])
     except _UPSTREAM_ERRORS as e:
         raise _upstream_error(e) from e
-    checked = resumes.check_plan(req.resume, plan, req.job_description)
+    edits, swaps = resumes.check_plan(req.resume, plan, req.job_description, req.repos)
+    links = resumes.link_additions(req.resume, req.link_repos or req.repos)
     return TailorResponse(
         summary=plan.summary,
-        edits=checked,
+        edits=edits,
+        swaps=swaps,
+        link_additions=links,
         reorder=plan.reorder,
         matched_keywords=plan.matched_keywords[:25],
         missing_keywords=plan.missing_keywords[:25],
-        dropped_edits=max(0, len(plan.edits) - len(checked)),
-        model=ai.model,
+        dropped_edits=max(0, len(plan.edits) - len(edits)),
+        repos_used=[r.name for r in req.repos],
+        model=used,
         usage=usage,
     )
 
@@ -266,8 +283,11 @@ class BuildRequest(BaseModel):
     resume: resumes.Resume
     edits: list[resumes.TailorEdit] = []
     reorder: list[resumes.SectionOrder] = []
+    swaps: list[resumes.ProjectSwap] = []
+    link_additions: list[resumes.LinkAddition] = []
     # When the person uploaded their own LaTeX, edits are applied to it so their design is kept.
     source_tex: str | None = Field(default=None, max_length=200_000)
+    one_page: bool = True
     compile: bool = True
 
 
@@ -276,6 +296,9 @@ class BuildResponse(BaseModel):
     pdf_base64: str | None = None
     compiled: bool
     compile_log: str = ""
+    pages: int = 0
+    # How much the template was tightened to fit one page (0 = not at all).
+    compact_level: int = 0
     # Edits that couldn't be located in the person's own .tex (they're in the text, but the markup differs).
     missed_edits: list[int] = []
     used_own_template: bool
@@ -283,21 +306,36 @@ class BuildResponse(BaseModel):
 
 @app.post("/resume/build", response_model=BuildResponse)
 async def resume_build(req: BuildRequest) -> BuildResponse:
-    """Applies accepted edits, renders LaTeX (the person's own, or the RepoMatch template) and compiles a PDF."""
+    """Applies accepted changes, renders LaTeX (the person's own, or the template) and compiles a PDF.
+
+    With one_page, a template resume that runs over is re-rendered tighter (smaller type, margins, spacing) until it
+    fits or the tightest setting is reached."""
     missed: list[int] = []
     own = bool(req.source_tex and r"\begin{document}" in req.source_tex)
     if own:
         latex, missed = resumes.apply_to_tex(req.source_tex, req.edits)
+        if not req.compile:
+            return BuildResponse(latex=latex, compiled=False, missed_edits=missed, used_own_template=True)
+        result = await resumes.compile_pdf(latex)
+        level = 0
     else:
-        latex = resumes.render_latex(resumes.apply_to_resume(req.resume, req.edits, req.reorder))
-    if not req.compile:
-        return BuildResponse(latex=latex, compiled=False, missed_edits=missed, used_own_template=own)
-    result = await resumes.compile_pdf(latex)
+        tailored = resumes.apply_to_resume(req.resume, req.edits, req.reorder, req.swaps, req.link_additions)
+        level = 0
+        latex = resumes.render_latex(tailored, level)
+        if not req.compile:
+            return BuildResponse(latex=latex, compiled=False, used_own_template=False)
+        result = await resumes.compile_pdf(latex)
+        while req.one_page and result.ok and result.pages > 1 and level < 2:
+            level += 1
+            latex = resumes.render_latex(tailored, level)
+            result = await resumes.compile_pdf(latex)
     return BuildResponse(
         latex=latex,
         pdf_base64=base64.b64encode(result.pdf).decode() if result.pdf else None,
         compiled=result.ok,
         compile_log="" if result.ok else result.log,
+        pages=result.pages,
+        compact_level=level,
         missed_edits=missed,
         used_own_template=own,
     )

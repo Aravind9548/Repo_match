@@ -10,10 +10,27 @@ import {
   suggestEdits,
   tailorDownloadUrl,
   type ResumeData,
+  type SuggestOptions,
   type TailorRun,
   type TailorStep,
 } from "@/lib/api";
 import { useTrackerKey } from "@/lib/trackerKey";
+
+/** Resume strings carry **bold** and [label](url) markers; show them as text, not symbols. */
+function plain(s: string) {
+  return (s ?? "").replace(/\[([^\]]+)\]\((https?:\/\/|mailto:)[^)\s]+\)/g, "$1").replace(/\*\*/g, "");
+}
+
+function Rich({ text }: { text: string }) {
+  const parts = (text ?? "").split(/(\*\*.+?\*\*)/g);
+  return (
+    <>
+      {parts.map((p, i) =>
+        p.startsWith("**") && p.endsWith("**") && p.length > 4 ? <strong key={i}>{plain(p)}</strong> : <span key={i}>{plain(p)}</span>,
+      )}
+    </>
+  );
+}
 
 const STEPS: { id: TailorStep; label: string; hint: string }[] = [
   { id: "REVIEW_RESUME", label: "Check", hint: "Resume as read + job description" },
@@ -114,7 +131,15 @@ export function TailorWorkflow({ id }: { id: string }) {
 
       <div key={run.step} className="animate-rise">
         {run.step === "REVIEW_RESUME" && (
-          <ReviewResume run={run} busy={busy} onSuggest={(resume, jd) => act("Reading the job and your resume…", () => suggestEdits(key!, run.id, { resume, jobDescription: jd }))} />
+          <ReviewResume
+            run={run}
+            busy={busy}
+            onSuggest={(opts) =>
+              act(opts.githubUsername ? "Reading the job, your resume and your GitHub…" : "Reading the job and your resume…", () =>
+                suggestEdits(key!, run.id, opts),
+              )
+            }
+          />
         )}
         {run.step === "REVIEW_EDITS" && (
           <ReviewEdits run={run} busy={busy} onBuild={(ids, keepOrder) => act("Building LaTeX and compiling your PDF…", () => buildTailored(key!, run.id, { acceptedIds: ids, keepOrder }))} />
@@ -134,11 +159,46 @@ function ReviewResume({
 }: {
   run: TailorRun;
   busy: string | null;
-  onSuggest: (resume: ResumeData | null, jd: string) => void;
+  onSuggest: (opts: SuggestOptions) => void;
 }) {
   const [resume, setResume] = useState<ResumeData | null>(run.resumeData);
   const [jd, setJd] = useState(run.jobDescription ?? "");
   const [edited, setEdited] = useState(false);
+  const [github, setGithub] = useState(run.githubUsername ?? "");
+  const [instructions, setInstructions] = useState(run.instructions ?? "");
+  const [onePage, setOnePage] = useState(run.onePage ?? true);
+  const [model, setModel] = useState<"pro" | "flash">(run.model ?? "pro");
+
+  // Remember the GitHub username across runs on this device.
+  useEffect(() => {
+    if (!run.githubUsername) {
+      try {
+        const saved = localStorage.getItem("repomatch.github");
+        if (saved) setGithub(saved);
+      } catch {
+        // storage unavailable: the field just starts empty
+      }
+    }
+  }, [run.githubUsername]);
+
+  const CHIPS = [
+    "Keep my formatting and section order",
+    "Don't change the skills section",
+    "Emphasise backend work",
+    "Emphasise AI/ML work",
+    "Keep every metric exactly as written",
+  ];
+  const addChip = (c: string) =>
+    setInstructions((cur) => (cur.includes(c) ? cur : cur.trim() ? `${cur.trim()}\n${c}` : c));
+
+  function submit() {
+    try {
+      if (github.trim()) localStorage.setItem("repomatch.github", github.trim());
+    } catch {
+      // ignore
+    }
+    onSuggest({ resume: edited ? resume : null, jobDescription: jd, githubUsername: github.trim(), instructions, onePage, model });
+  }
 
   function setBullet(si: number, ii: number, bi: number, value: string) {
     if (!resume) return;
@@ -177,7 +237,12 @@ function ReviewResume({
                   {s.items.map((it, ii) => (
                     <div key={ii} className="mt-3">
                       <p className="text-sm text-ink">
-                        {it.title}
+                        {plain(it.title)}
+                        {it.links?.map((l) => (
+                          <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="ml-2 text-xs text-accent-2 hover:underline">
+                            {l.label} ↗
+                          </a>
+                        ))}
                         {it.date && <span className="float-right text-muted">{it.date}</span>}
                       </p>
                       {(it.subtitle || it.location) && (
@@ -189,6 +254,7 @@ function ReviewResume({
                             <span className="mt-2 text-muted">•</span>
                             <textarea
                               value={b}
+                              title="**bold** and [label](url) keep their formatting"
                               rows={Math.max(1, Math.ceil(b.length / 70))}
                               onChange={(e) => setBullet(si, ii, bi, e.target.value)}
                               className="w-full resize-none border border-transparent bg-transparent px-1.5 py-1 text-sm leading-relaxed text-body outline-none transition hover:border-line focus:border-accent focus:bg-paper"
@@ -226,20 +292,79 @@ function ReviewResume({
           placeholder="Paste the job description here…"
           className="mt-3 min-h-80 flex-1 border border-line bg-card p-4 text-sm leading-relaxed text-body outline-none focus:border-accent"
         />
-        <div className="mt-6 border border-line bg-card p-5">
-          <p className="text-sm text-body">
-            Next, Gemini reads both and proposes specific rewordings. It may only reword and reorder what&apos;s already
-            on your resume — anything that adds a skill you didn&apos;t list is flagged and left off.
-          </p>
-          <button
-            type="button"
-            className="btn btn-primary mt-5 w-full"
-            disabled={!!busy || jd.trim().length < 40 || !resume}
-            onClick={() => onSuggest(edited ? resume : null, jd)}
-          >
+        <div className="mt-6 space-y-5 border border-line bg-card p-5">
+          <label className="block">
+            <span className="label">Your GitHub username</span>
+            <input
+              value={github}
+              onChange={(e) => setGithub(e.target.value)}
+              placeholder="e.g. Aravind9548 — optional"
+              className="mt-2 w-full border border-line bg-paper px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
+            />
+            <span className="mt-1.5 block text-xs text-muted">
+              Your repos most relevant to this job are read too: details from their READMEs can strengthen bullets (each
+              quotes the repo), missing project links are added, and a better-fitting project can be suggested.
+            </span>
+          </label>
+
+          <div>
+            <span className="label">Your instructions</span>
+            <textarea
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder="Anything the edits must respect…"
+              className="mt-2 min-h-20 w-full border border-line bg-paper p-3 text-sm text-body outline-none focus:border-accent"
+            />
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {CHIPS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => addChip(c)}
+                  className="border border-line px-2.5 py-1 text-xs text-muted transition hover:border-accent hover:text-ink"
+                >
+                  + {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" className="mt-1 accent-[var(--accent)]" checked={onePage} onChange={() => setOnePage(!onePage)} />
+            <span className="text-sm text-body">
+              Keep it to one page
+              <span className="block text-xs text-muted">Edits won&apos;t lengthen it, and the PDF is tightened automatically if it runs over.</span>
+            </span>
+          </label>
+
+          <div>
+            <span className="label">Model</span>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["pro", "Gemini 3.1 Pro", "Most careful · ~30–60s"],
+                  ["flash", "Gemini 2.5 Flash", "Faster, cheaper · ~10–20s"],
+                ] as const
+              ).map(([id, name, hint]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setModel(id)}
+                  className={`border p-3 text-left transition ${model === id ? "border-accent bg-accent-soft" : "border-line hover:border-line-strong"}`}
+                >
+                  <span className="block text-sm text-ink">{name}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{hint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button type="button" className="btn btn-primary w-full" disabled={!!busy || jd.trim().length < 40 || !resume} onClick={submit}>
             {busy ?? "Suggest edits →"}
           </button>
-          <p className="label mt-3 text-center">One AI call · about 30–60 seconds</p>
+          <p className="label text-center">
+            One AI call · edits may only use your resume{github.trim() ? " and your repos" : ""} — anything else is flagged
+          </p>
         </div>
       </section>
     </div>
@@ -296,9 +421,22 @@ function ReviewEdits({
                 <input type="checkbox" className="mt-1 size-4 accent-[var(--accent)]" checked={on} onChange={() => toggle(e.id)} />
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted">{e.section}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted line-through decoration-muted/60">{e.before}</p>
-                  <p className="mt-1.5 leading-relaxed text-ink">{e.after}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted line-through decoration-muted/60">
+                    <Rich text={e.before} />
+                  </p>
+                  <p className="mt-1.5 leading-relaxed text-ink">
+                    <Rich text={e.after} />
+                  </p>
                   <p className="mt-2 text-xs text-accent-2">Why: {e.reason}</p>
+                  {e.source === "github" && (
+                    <p className="mt-2 border-l-2 border-teal/60 pl-3 text-xs leading-relaxed text-body">
+                      From your repo{" "}
+                      <a href={e.repo_url} target="_blank" rel="noreferrer" className="text-teal hover:underline">
+                        {e.repo} ↗
+                      </a>
+                      : &ldquo;{e.evidence}&rdquo;
+                    </p>
+                  )}
                   {e.unsupported && (
                     <p className="mt-3 border border-amber/40 bg-amber-soft px-3 py-2 text-xs leading-relaxed text-body">
                       {e.from_job_ad.length > 0 ? (
@@ -319,6 +457,59 @@ function ReviewEdits({
             </label>
           );
         })}
+        {plan.link_additions?.length > 0 && (
+          <div className="border border-line bg-card p-5">
+            <p className="label">Add missing GitHub links</p>
+            <div className="mt-3 space-y-2">
+              {plan.link_additions.map((l) => (
+                <label key={l.id} className="flex cursor-pointer items-center gap-3 text-sm text-body">
+                  <input type="checkbox" className="accent-[var(--accent)]" checked={kept.has(l.id)} onChange={() => toggle(l.id)} />
+                  <span>
+                    {l.item_title} →{" "}
+                    <a href={l.url} target="_blank" rel="noreferrer" className="text-accent-2 hover:underline">
+                      {l.url.replace("https://", "")}
+                    </a>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {plan.swaps?.map((s) => {
+          const on = kept.has(s.id);
+          return (
+            <label key={s.id} className={`block cursor-pointer border p-5 transition ${on ? "border-teal/60 bg-card" : "border-line bg-paper"}`}>
+              <div className="flex items-start gap-4">
+                <input type="checkbox" className="mt-1 size-4 accent-[var(--accent)]" checked={on} onChange={() => toggle(s.id)} />
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-teal">Project swap · {s.section}</p>
+                  <p className="mt-2 text-sm text-muted">
+                    Replace <span className="line-through">{plain(s.replace_title)}</span> with{" "}
+                    <a href={s.repo_url} target="_blank" rel="noreferrer" className="text-teal hover:underline">
+                      {s.repo} ↗
+                    </a>
+                  </p>
+                  <div className="mt-3 border border-line bg-paper p-3">
+                    <p className="text-sm text-ink">
+                      {plain(s.new_item.title)} <span className="text-xs italic text-muted">{s.new_item.subtitle}</span>
+                    </p>
+                    <ul className="mt-1.5 list-disc space-y-1 pl-5 text-sm text-body">
+                      {s.new_item.bullets.map((b, i) => (
+                        <li key={i}>{plain(b)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="mt-2 text-xs text-accent-2">Why: {s.reason}</p>
+                  {s.unsupported && (
+                    <p className="mt-2 text-xs text-amber">⚠ Uses {s.new_terms.join(", ")}, which the repo doesn&apos;t mention — check before keeping.</p>
+                  )}
+                </div>
+              </div>
+            </label>
+          );
+        })}
+
         {plan.dropped_edits > 0 && (
           <p className="text-xs text-muted">
             {plan.dropped_edits} suggestion{plan.dropped_edits === 1 ? " was" : "s were"} discarded because they didn&apos;t match text on your resume.
@@ -327,6 +518,12 @@ function ReviewEdits({
       </section>
 
       <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+        {plan.repos_used?.length > 0 && (
+          <div className="border border-line p-4">
+            <p className="label">Repos read for this job</p>
+            <p className="mt-2 text-xs leading-relaxed text-body">{plan.repos_used.join(" · ")}</p>
+          </div>
+        )}
         {plan.matched_keywords.length > 0 && (
           <div className="border border-line p-4">
             <p className="label">Already on your resume</p>
@@ -365,7 +562,9 @@ function ReviewEdits({
         )}
         <div className="border border-line bg-card p-5">
           <p className="text-sm text-body">
-            {kept.size} of {plan.edits.length} edits kept. Next, they&apos;re applied to{" "}
+            {plan.edits.filter((e) => kept.has(e.id)).length} of {plan.edits.length} edits kept
+            {plan.swaps?.some((s) => kept.has(s.id)) ? ", a project swap" : ""}
+            {plan.link_additions?.some((l) => kept.has(l.id)) ? ", GitHub links" : ""}. Next, they&apos;re applied to{" "}
             {run.resume?.kind === "TEX" ? "your own LaTeX" : "a clean LaTeX template"} and compiled into a PDF.
           </p>
           <button type="button" className="btn btn-primary mt-5 w-full" disabled={!!busy} onClick={() => onBuild([...kept], !useOrder)}>
@@ -407,9 +606,16 @@ function Done({ run, keyValue, busy, onBack }: { run: TailorRun; keyValue: strin
         <div className="border border-line bg-card p-5">
           <p className="label">Your tailored resume</p>
           <p className="mt-2 text-sm text-body">
-            {run.acceptedIds.length} edit{run.acceptedIds.length === 1 ? "" : "s"} applied ·{" "}
+            {run.acceptedIds.length} change{run.acceptedIds.length === 1 ? "" : "s"} applied ·{" "}
             {run.usedOwnTemplate ? "your own LaTeX design" : "RepoMatch template"}
+            {run.pages ? ` · ${run.pages} page${run.pages === 1 ? "" : "s"}` : ""}
           </p>
+          {run.onePage && (run.pages ?? 0) > 1 && (
+            <p className="mt-3 text-xs leading-relaxed text-amber">
+              Still {run.pages} pages at the tightest setting. Go back and untick a project swap or a long edit, or
+              remove a line from your resume at the Check step.
+            </p>
+          )}
           {run.hasPdf && (
             <a href={pdfUrl} className="btn btn-primary mt-5 w-full">
               Download PDF
