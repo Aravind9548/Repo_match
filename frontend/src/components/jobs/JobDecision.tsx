@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   approvePosting,
@@ -35,6 +36,7 @@ function stageFor(app: Application | null): Stage {
  * Nothing is ever submitted for the person; the last gate only records that they did.
  */
 export function JobDecision({ postingId }: { postingId: number }) {
+  const router = useRouter();
   const { key, ready } = useTrackerKey({ create: true });
   const [posting, setPosting] = useState<Posting | null>(null);
   const [app, setApp] = useState<Application | null>(null);
@@ -198,7 +200,13 @@ export function JobDecision({ postingId }: { postingId: number }) {
           {stage === "resume" && app && (
             <ResumeGate
               busy={busy}
-              onChoose={(choice) => run(async () => setApp(await updateApplication(key!, app.id, { resumeChoice: choice })))}
+              onChoose={(choice) =>
+                run(async () => {
+                  setApp(await updateApplication(key!, app.id, { resumeChoice: choice }));
+                  // Tailoring is its own step-by-step page: pick a resume, check it, choose edits, get the PDF.
+                  if (choice === "TAILORED") router.push(`/tailor/new?application=${app.id}`);
+                })
+              }
             />
           )}
 
@@ -226,10 +234,16 @@ export function JobDecision({ postingId }: { postingId: number }) {
                 </button>
               </p>
               {app.resumeChoice === "TAILORED" && (
-                <p className="mt-4 border border-amber/40 bg-amber-soft px-3 py-2 text-xs leading-relaxed text-body">
-                  Automatic tailoring isn&apos;t built yet — it&apos;s the next feature. For now this records your choice
-                  so you remember to adjust the resume before submitting.
-                </p>
+                <Link
+                  href={`/tailor/new?application=${app.id}`}
+                  className="mt-4 flex items-center justify-between border border-accent/40 bg-accent-soft px-4 py-3 text-sm text-ink transition hover:border-accent"
+                >
+                  <span>
+                    Tailor your resume for this role
+                    <span className="mt-0.5 block text-xs text-muted">Upload it, approve the edits, download the PDF</span>
+                  </span>
+                  <span className="text-accent-2">→</span>
+                </Link>
               )}
               <ol className="mt-5 space-y-2 text-sm text-body">
                 <li>1. Open the application in a new tab.</li>
@@ -308,7 +322,7 @@ function ResumeGate({ busy, onChoose }: { busy: boolean; onChoose: (c: ResumeCho
             Tailor to this role <span className="text-muted transition group-hover:translate-x-1">→</span>
           </span>
           <span className="mt-1 block text-sm text-muted">
-            Reorder projects and bullets toward the posting. You review every change before using it.
+            Upload your resume, approve each suggested edit, and get a LaTeX-built PDF back. Nothing is invented.
           </span>
         </button>
       </div>

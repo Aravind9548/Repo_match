@@ -463,3 +463,79 @@ export type WebSearchResult = { query: string; jobs: WebJob[]; dropped: number; 
 /** Paid (one grounded Gemini + Google Search call) — only on an explicit click. */
 export const webSearchJobs = (body: { q: string; location: string; kind: JobKind | "" }) =>
   post<WebSearchResult>("/api/jobs/web-search", { ...body, kind: body.kind || null });
+
+// --- Resume tailoring ------------------------------------------------------------------------------------------
+
+export type ResumeDoc = { id: number; filename: string; kind: "TEX" | "TEXT"; chars: number; read: boolean; createdAt: string };
+
+export type ResumeItem = { title: string; subtitle: string; date: string; location: string; bullets: string[] };
+export type ResumeSection = { title: string; kind: string; items: ResumeItem[]; lines: string[] };
+export type ResumeData = { name: string; headline: string; contact: string[]; sections: ResumeSection[] };
+
+export type TailorEdit = {
+  id: number;
+  section: string;
+  before: string;
+  after: string;
+  reason: string;
+  /** Words the new wording adds that appear nowhere on the resume. */
+  new_terms: string[];
+  /** True when those words look like skills or tools the resume never claimed. */
+  unsupported: boolean;
+};
+
+export type TailorPlan = {
+  summary: string;
+  edits: TailorEdit[];
+  reorder: { section: string; item_titles: string[] }[];
+  matched_keywords: string[];
+  missing_keywords: string[];
+  dropped_edits: number;
+  model: string;
+};
+
+export type TailorStep = "REVIEW_RESUME" | "REVIEW_EDITS" | "DONE";
+
+export type TailorRun = {
+  id: string;
+  step: TailorStep;
+  applicationId: number | null;
+  postingId: number | null;
+  resume: ResumeDoc | null;
+  company: string | null;
+  jobTitle: string | null;
+  jobDescription: string | null;
+  resumeData: ResumeData | null;
+  plan: TailorPlan | null;
+  acceptedIds: number[];
+  compiled: boolean;
+  hasPdf: boolean;
+  compileLog: string | null;
+  usedOwnTemplate: boolean;
+  missedEdits: number[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const listResumes = (key: string) => request<ResumeDoc[]>("/api/tailor/resumes", keyed(key));
+export const addResume = (key: string, body: { filename?: string; dataBase64?: string; text?: string }) =>
+  request<ResumeDoc>("/api/tailor/resumes", keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export const deleteResume = (key: string, id: number) =>
+  request<void>(`/api/tailor/resumes/${id}`, keyed(key, { method: "DELETE" }));
+export const getPostingDescription = (postingId: number) =>
+  request<{ postingId: number; text: string }>(`/api/tailor/postings/${postingId}/description`);
+/** May read the resume with Gemini the first time it's used (paid). */
+export const startTailor = (key: string, body: { applicationId?: number; postingId?: number; resumeId: number }) =>
+  request<TailorRun>("/api/tailor/runs", keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export const getTailorRun = (key: string, id: string) => request<TailorRun>(`/api/tailor/runs/${id}`, keyed(key));
+export const tailorRunsForApplication = (key: string, applicationId: number) =>
+  request<TailorRun[]>(`/api/tailor/applications/${applicationId}/runs`, keyed(key));
+/** Paid: one Gemini call proposing edits. */
+export const suggestEdits = (key: string, id: string, body: { resume: ResumeData | null; jobDescription: string }) =>
+  request<TailorRun>(`/api/tailor/runs/${id}/suggest`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export const buildTailored = (key: string, id: string, body: { acceptedIds: number[]; keepOrder: boolean }) =>
+  request<TailorRun>(`/api/tailor/runs/${id}/build`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export const rewindTailor = (key: string, id: string, step: TailorStep) =>
+  request<TailorRun>(`/api/tailor/runs/${id}/rewind`, keyed(key, { method: "POST", body: JSON.stringify({ step }) }));
+export const tailorDownloadUrl = (key: string, id: string, format: "pdf" | "tex") =>
+  `${baseUrl()}/api/tailor/runs/${id}/download?format=${format}&key=${encodeURIComponent(key)}`;

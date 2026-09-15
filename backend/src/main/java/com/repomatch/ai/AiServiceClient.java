@@ -62,6 +62,11 @@ public class AiServiceClient {
         return post("/websearch", request, WebSearchResponse.class);
     }
 
+    /** Resume tailoring calls pass JSON through: the shapes live in the AI service and the frontend. */
+    public com.fasterxml.jackson.databind.JsonNode resume(String action, Object body) {
+        return post("/resume/" + action, body, com.fasterxml.jackson.databind.JsonNode.class);
+    }
+
     private <T> T post(String path, Object body, Class<T> type) {
         try {
             return http.post().uri(path)

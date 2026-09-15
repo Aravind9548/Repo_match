@@ -7,7 +7,10 @@ import {
   deleteApplication,
   describeError,
   getApplication,
+  tailorDownloadUrl,
+  tailorRunsForApplication,
   updateApplication,
+  type TailorRun,
   type Application,
   type ApplicationStatus,
   type ApplicationUpdate,
@@ -39,6 +42,7 @@ export function ApplicationDetail({ id }: { id: number }) {
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tailored, setTailored] = useState<TailorRun[]>([]);
 
   const accept = useCallback((a: Application) => {
     setApp(a);
@@ -52,6 +56,7 @@ export function ApplicationDetail({ id }: { id: number }) {
       return;
     }
     getApplication(key, id).then(accept).catch((err) => setError(describeError(err)));
+    tailorRunsForApplication(key, id).then(setTailored).catch(() => setTailored([]));
   }, [ready, key, id, accept]);
 
   async function save(body: ApplicationUpdate) {
@@ -228,6 +233,32 @@ export function ApplicationDetail({ id }: { id: number }) {
             </button>
             <p className="text-xs text-muted">With an email on one of your alerts, you&apos;ll be reminded two days before.</p>
           </div>
+        </div>
+
+        <div className="border border-accent/40 bg-card p-5">
+          <p className="label">Resume for this job</p>
+          <p className="mt-2 text-sm text-body">
+            Upload a resume — or the one you already sent — and get a version tailored to this role as a PDF.
+          </p>
+          <Link href={`/tailor/new?application=${app.id}`} className="btn btn-primary mt-4 w-full !py-2.5">
+            {tailored.length ? "Tailor again" : "Tailor my resume"}
+          </Link>
+          {tailored.length > 0 && key && (
+            <ul className="mt-4 space-y-2 border-t border-line pt-4">
+              {tailored.slice(0, 4).map((t) => (
+                <li key={t.id} className="flex items-center justify-between gap-3 text-sm">
+                  <Link href={`/tailor/${t.id}`} className="truncate text-body hover:text-accent-2">
+                    {t.step === "DONE" ? "Built" : "In progress"} · {timeAgo(t.updatedAt)}
+                  </Link>
+                  {t.hasPdf && (
+                    <a href={tailorDownloadUrl(key, t.id, "pdf")} className="label shrink-0 text-accent-2 hover:text-ink">
+                      PDF ↓
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="border border-line bg-card p-5">

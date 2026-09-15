@@ -79,6 +79,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
     }
 
+    @ExceptionHandler(com.repomatch.tailor.TailorService.TailorNotFoundException.class)
+    ProblemDetail tailorNotFound(RuntimeException e) {
+        return problem(HttpStatus.NOT_FOUND, "Not found", e.getMessage());
+    }
+
+    @ExceptionHandler(com.repomatch.tailor.TailorService.TailorStepException.class)
+    ProblemDetail tailorStep(RuntimeException e) {
+        return problem(HttpStatus.CONFLICT, "Step not available", e.getMessage());
+    }
+
     @ExceptionHandler(OwnerKeys.MissingOwnerKeyException.class)
     ProblemDetail noKey(OwnerKeys.MissingOwnerKeyException e) {
         return problem(HttpStatus.UNAUTHORIZED, "Tracker key needed", e.getMessage());
