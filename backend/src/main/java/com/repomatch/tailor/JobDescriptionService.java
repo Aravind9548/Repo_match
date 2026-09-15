@@ -52,23 +52,46 @@ public class JobDescriptionService {
 
     /** The cached description, fetching it the first time. Empty string when nothing readable was found. */
     public String forPosting(long postingId) {
-        List<String[]> rows = jdbc.query("select apply_url, description from job_posting where id = ?",
-                (rs, i) -> new String[] {rs.getString(1), rs.getString(2)}, postingId);
+        List<String[]> rows = jdbc.query("""
+                select p.apply_url, p.description, s.type, s.slug
+                from job_posting p join job_source s on s.id = p.source_id where p.id = ?""",
+                (rs, i) -> new String[] {rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4)}, postingId);
         if (rows.isEmpty()) {
             return "";
         }
-        if (rows.getFirst()[1] != null) {
-            return rows.getFirst()[1];
+        String[] row = rows.getFirst();
+        if (row[1] != null && !row[1].isBlank()) {
+            return row[1];
         }
-        String text = fetch(rows.getFirst()[0]);
-        jdbc.update("update job_posting set description = ?, description_fetched_at = ? where id = ?",
-                text, Timestamp.from(Instant.now()), postingId);
+        String text = fetch(row[0], row[2], row[3]);
+        // Only a real description is cached; an empty result is retried next time.
+        if (!text.isBlank()) {
+            jdbc.update("update job_posting set description = ?, description_fetched_at = ? where id = ?",
+                    text, Timestamp.from(Instant.now()), postingId);
+        }
         return text;
     }
 
-    String fetch(String url) {
+    /** Job id inside a Greenhouse link, whether on greenhouse.io or a company domain ("...?gh_jid=8166537"). */
+    static String greenhouseId(String url) {
+        Matcher m = GH_JID.matcher(url);
+        if (m.find()) {
+            return m.group(1);
+        }
+        m = GREENHOUSE.matcher(url);
+        return m.find() ? m.group(2) : null;
+    }
+
+    String fetch(String url, String sourceType, String sourceSlug) {
         try {
-            String text = viaApi(url);
+            String text = null;
+            // We know which board a posting came from, so boards on company domains still use the exact API.
+            if ("GREENHOUSE".equals(sourceType) && sourceSlug != null && greenhouseId(url) != null) {
+                text = greenhouse(sourceSlug, greenhouseId(url));
+            }
+            if (text == null || text.isBlank()) {
+                text = viaApi(url);
+            }
             if (text == null || text.isBlank()) {
                 text = viaPage(url);
             }
