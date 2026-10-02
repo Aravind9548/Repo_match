@@ -94,3 +94,7 @@ management:
     web:
       exposure:
         include: health,info
+  health:
+    # Email is optional: with no SMTP configured its check would report the whole app as down.
+    mail:
+      enabled: false
