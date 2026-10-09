@@ -299,6 +299,8 @@ class BuildRequest(BaseModel):
     link_additions: list[resumes.LinkAddition] = []
     # When the person uploaded their own LaTeX, edits are applied to it so their design is kept.
     source_tex: str | None = Field(default=None, max_length=200_000)
+    # Lines the person added themselves, in their own words.
+    additions: list[resumes.BulletAddition] = []
     one_page: bool = True
     compile: bool = True
 
@@ -331,7 +333,8 @@ async def resume_build(req: BuildRequest) -> BuildResponse:
         result = await resumes.compile_pdf(latex)
         level = 0
     else:
-        tailored = resumes.apply_to_resume(req.resume, req.edits, req.reorder, req.swaps, req.link_additions)
+        tailored = resumes.apply_to_resume(req.resume, req.edits, req.reorder, req.swaps, req.link_additions,
+                                           req.additions)
         level = 0
         latex = resumes.render_latex(tailored, level)
         if not req.compile:
@@ -428,3 +431,51 @@ async def resume_ats(req: AtsCheckRequest,
         raise _upstream_error(e) from e
     return AtsCheckResponse(parse=parse, coverage=atscheck.check_coverage(plan, extracted),
                             extracted=extracted[:20_000], model=used, usage=usage)
+
+
+class ApplyRequest(BaseModel):
+    """Everything that changes the resume, so the person can read the result before it is built."""
+
+    resume: resumes.Resume
+    edits: list[resumes.TailorEdit] = []
+    reorder: list[resumes.SectionOrder] = []
+    swaps: list[resumes.ProjectSwap] = []
+    link_additions: list[resumes.LinkAddition] = []
+    additions: list[resumes.BulletAddition] = []
+
+
+class ApplyResponse(BaseModel):
+    resume: resumes.Resume
+
+
+@app.post("/resume/apply", response_model=ApplyResponse)
+async def resume_apply(req: ApplyRequest) -> ApplyResponse:
+    """The resume with every accepted change applied. No model call — this is the same function the build uses."""
+    return ApplyResponse(resume=resumes.apply_to_resume(req.resume, req.edits, req.reorder, req.swaps,
+                                                        req.link_additions, req.additions))
+
+
+class PhraseRequest(BaseModel):
+    # What the person wrote about their own work, in their own words.
+    sentence: str = Field(min_length=3, max_length=1500)
+    resume: resumes.Resume
+    model: str = Field(default="flash", pattern="^(pro|flash)$")
+
+
+class PhraseResponse(BaseModel):
+    phrasing: resumes.CheckedPhrasing
+    model: str = ""
+    usage: TokenUsage | None = None
+
+
+@app.post("/resume/phrase", response_model=PhraseResponse)
+async def resume_phrase(req: PhraseRequest, ai: resumes.ResumeAi = Depends(get_resume_ai)) -> PhraseResponse:
+    """Tightens the person's own sentence into a resume bullet, adding nothing they did not say.
+
+    If the model reaches for a tool, a number or an achievement the sentence doesn't contain, their sentence is
+    returned unchanged and the words it tried to add are named."""
+    try:
+        phrasing, usage, used = await ai.phrase(req.sentence, req.resume, TAILOR_MODELS[req.model])
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
+    return PhraseResponse(phrasing=resumes.check_phrasing(req.sentence, phrasing, req.resume), model=used, usage=usage)

@@ -101,7 +101,8 @@ class AutoPrepareServiceTest {
     private TailorService.RunView run(String jobDescription) {
         return new TailorService.RunView(UUID.randomUUID(), TailorRunEntity.Step.REVIEW_EDITS, 1L, 1L, null, "Acme",
                 "SDE Intern", jobDescription, null, null, List.of(1, 2), false, false, null, false, List.of(),
-                "Aravind9548", "Keep it to one page.", true, "pro", null, null, null, Instant.now(), Instant.now());
+                "Aravind9548", "Keep it to one page.", true, "pro", null, null, null, null, null, Instant.now(),
+                Instant.now());
     }
 
     @Test

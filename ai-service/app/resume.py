@@ -316,6 +316,19 @@ class CheckedSwap(ProjectSwap):
     unsupported: bool = False
 
 
+class BulletAddition(BaseModel):
+    """A line the person adds themselves, to answer something the job asks for that the resume didn't show.
+
+    The text is theirs. Nothing here is drafted from the job ad — the gap it answers is recorded only so the person
+    can see why the line is there."""
+
+    section: str
+    # Empty to add the line to the section itself rather than to one of its items.
+    item_title: str = ""
+    text: str
+    gap: str = ""
+
+
 class LinkAddition(BaseModel):
     id: int
     section: str
@@ -472,10 +485,35 @@ def _usage(resp) -> TokenUsage | None:
     )
 
 
+PHRASE_INSTRUCTION = """You rewrite one sentence a person wrote about their own work into a resume bullet.
+
+You are not a ghostwriter and not a salesperson. The facts are theirs and the facts are fixed:
+
+- Use ONLY what their sentence says. Never add a tool, a number, a company, a scale, a result or a quality they did not write. If their sentence is vague, the bullet stays vague.
+- Start with a plain past-tense verb (Built, Led, Wrote, Fixed, Ran, Taught). No "spearheaded", no "leveraged".
+- One sentence, at most 28 words, no full stop at the end if their own lines have none.
+- Never mention the job, the company applying to, or the quality being demonstrated. A bullet that says "showing strong collaboration" is worthless; the work itself shows it.
+- If their sentence is already a good bullet, return it unchanged."""
+
+
+class Phrasing(BaseModel):
+    bullet: str = ""
+
+
+class CheckedPhrasing(Phrasing):
+    # Words the bullet uses that the person did not write and that appear nowhere on their resume.
+    new_terms: list[str] = []
+    # True when those words look like claims. The caller shows the person's own sentence instead.
+    unsupported: bool = False
+
+
 class ResumeAi(Protocol):
     model: str
 
     async def structure(self, text: str) -> tuple[Resume, TokenUsage | None]: ...
+
+    async def phrase(self, sentence: str, resume: Resume,
+                     model: str | None = None) -> tuple[Phrasing, TokenUsage | None, str]: ...
 
     async def tailor(self, resume: Resume, job_description: str, job_title: str, repos: list[RepoEvidence],
                      instructions: str, one_page: bool, model: str | None = None) -> tuple[TailorPlan, TokenUsage | None, str]: ...
@@ -521,6 +559,21 @@ class GeminiResumeAi:
         resume = resp.parsed if isinstance(resp.parsed, Resume) else Resume.model_validate_json(resp.text)
         return resume, _usage(resp)
 
+    async def phrase(self, sentence, resume, model=None):
+        used = model or self.model
+        resp = await self._client.aio.models.generate_content(
+            model=used,
+            contents="Their sentence:\n" + sentence[:1500],
+            config=types.GenerateContentConfig(
+                system_instruction=PHRASE_INSTRUCTION,
+                temperature=0.1,
+                response_mime_type="application/json",
+                response_schema=Phrasing,
+            ),
+        )
+        parsed = resp.parsed if isinstance(resp.parsed, Phrasing) else Phrasing.model_validate_json(resp.text or "{}")
+        return parsed, _usage(resp), used
+
     async def tailor(self, resume, job_description, job_title, repos, instructions, one_page, model=None):
         used = model or self.model
         resp = await self._client.aio.models.generate_content(
@@ -541,7 +594,8 @@ class GeminiResumeAi:
 
 
 def apply_to_resume(resume: Resume, edits: list[TailorEdit], reorder: list[SectionOrder],
-                    swaps: list[ProjectSwap] | None = None, links: list[LinkAddition] | None = None) -> Resume:
+                    swaps: list[ProjectSwap] | None = None, links: list[LinkAddition] | None = None,
+                    additions: list[BulletAddition] | None = None) -> Resume:
     r = resume.model_copy(deep=True)
     replace = {_key(e.before): e.after for e in edits}
 
@@ -564,9 +618,44 @@ def apply_to_resume(resume: Resume, edits: list[TailorEdit], reorder: list[Secti
         if order:
             rank = {_key(t): i for i, t in enumerate(order.item_titles)}
             section.items.sort(key=lambda it: rank.get(_key(it.title), len(rank)))
+    for add in additions or []:
+        _add_bullet(r, add)
     if r.headline:
         r.headline = swap_text(r.headline)
     return r
+
+
+def _add_bullet(r: Resume, add: BulletAddition) -> None:
+    """Puts the person's own line where they asked for it, creating the section if it isn't there yet."""
+    text = (add.text or "").strip()
+    if not text:
+        return
+    section = next((s for s in r.sections if _key(s.title) == _key(add.section)), None)
+    if section is None:
+        section = ResumeSection(title=add.section.strip() or "Additional", kind="other", items=[], lines=[])
+        r.sections.append(section)
+    if add.item_title:
+        item = next((it for it in section.items if _key(it.title) == _key(add.item_title)), None)
+        if item is not None:
+            item.bullets.append(text)
+            return
+    if section.items and not add.item_title:
+        section.items[0].bullets.append(text)
+        return
+    section.lines.append(text)
+
+
+def check_phrasing(sentence: str, phrasing: Phrasing, resume: Resume) -> CheckedPhrasing:
+    """A tightened bullet may only use the person's own words plus what's already on their resume."""
+    bullet = (phrasing.bullet or "").strip()
+    if not bullet:
+        return CheckedPhrasing(bullet=sentence.strip())
+    new = introduced_terms(sentence, bullet, resume_text(resume))
+    claims = [t for i, t in enumerate(new) if _looks_like_claim(t, first_word=(i == 0 and bullet.startswith(t)))]
+    if claims:
+        # It added something they didn't say: hand back their own sentence and say why.
+        return CheckedPhrasing(bullet=sentence.strip(), new_terms=claims, unsupported=True)
+    return CheckedPhrasing(bullet=bullet, new_terms=new)
 
 
 def latex_variants(text: str) -> list[str]:

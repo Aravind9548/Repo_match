@@ -3,6 +3,8 @@
 import Link from "next/link";
 
 import { AtsCheck } from "@/components/tailor/AtsCheck";
+import { AddLine, AddedLines } from "@/components/tailor/AddLine";
+import { ResumePreview } from "@/components/tailor/ResumePreview";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildTailored,
@@ -143,8 +145,16 @@ export function TailorWorkflow({ id }: { id: string }) {
             }
           />
         )}
-        {run.step === "REVIEW_EDITS" && (
-          <ReviewEdits run={run} busy={busy} onBuild={(ids, keepOrder) => act("Building LaTeX and compiling your PDF…", () => buildTailored(key!, run.id, { acceptedIds: ids, keepOrder }))} />
+        {run.step === "REVIEW_EDITS" && key && (
+          <ReviewEdits
+            run={run}
+            busy={busy}
+            keyValue={key}
+            onBuild={(ids, keepOrder) =>
+              act("Building LaTeX and compiling your PDF…", () => buildTailored(key, run.id, { acceptedIds: ids, keepOrder }))
+            }
+            onRun={setRun}
+          />
         )}
         {run.step === "DONE" && key && (
           <Done
@@ -386,15 +396,25 @@ function ReviewResume({
 function ReviewEdits({
   run,
   busy,
+  keyValue,
   onBuild,
+  onRun,
 }: {
   run: TailorRun;
   busy: string | null;
+  keyValue: string;
   onBuild: (ids: number[], keepOrder: boolean) => void;
+  onRun: (next: TailorRun) => void;
 }) {
   const plan = run.plan!;
   const [kept, setKept] = useState<Set<number>>(new Set(run.acceptedIds));
   const [useOrder, setUseOrder] = useState(plan.reorder.length > 0);
+  const [adding, setAdding] = useState<string | null>(null);
+  // Where an added line can go: the resume's own sections, as it was read.
+  const sections = (run.resumeData?.sections ?? []).map((s) => ({
+    title: s.title,
+    itemTitles: s.items.map((i) => i.title).filter(Boolean),
+  }));
   const toggle = (id: number) =>
     setKept((k) => {
       const next = new Set(k);
@@ -548,17 +568,47 @@ function ReviewEdits({
         )}
         {plan.missing_keywords.length > 0 && (
           <div className="border border-line p-4">
-            <p className="label">Gaps — not added</p>
+            <p className="label">Gaps — yours to answer</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {plan.missing_keywords.map((k) => (
-                <span key={k} className="border border-amber/40 bg-amber-soft px-2 py-0.5 text-xs text-body">
-                  {k}
-                </span>
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setAdding(adding === k ? null : k)}
+                  title={`Say what you did that shows ${k}`}
+                  className={`border px-2 py-0.5 text-xs transition ${
+                    adding === k
+                      ? "border-accent bg-accent text-white"
+                      : "border-amber/40 bg-amber-soft text-body hover:border-accent hover:text-ink"
+                  }`}
+                >
+                  {k} <span className="opacity-60">+</span>
+                </button>
               ))}
             </div>
-            <p className="mt-3 text-xs text-muted">The job asks for these and your resume doesn&apos;t show them. Worth a project, not a fib.</p>
+            <p className="mt-3 text-xs text-muted">
+              The job asks for these and your resume doesn&apos;t show them. Click one to add a line about what you
+              actually did — nothing is written for you, and the word itself is never pasted in.
+            </p>
+            {adding && (
+              <AddLine
+                run={run}
+                trackerKey={keyValue}
+                gap={adding}
+                sections={sections.length ? sections : [{ title: "Projects", itemTitles: [] }]}
+                onDone={(next) => {
+                  setAdding(null);
+                  onRun(next);
+                }}
+                onCancel={() => setAdding(null)}
+              />
+            )}
           </div>
         )}
+
+        <AddedLines run={run} trackerKey={keyValue} onChange={onRun} />
+
+        <ResumePreview run={run} trackerKey={keyValue} acceptedIds={[...kept]} onChange={onRun} />
         {plan.reorder.length > 0 && (
           <label className="flex cursor-pointer items-start gap-3 border border-line p-4">
             <input type="checkbox" className="mt-1 accent-[var(--accent)]" checked={useOrder} onChange={() => setUseOrder(!useOrder)} />
@@ -647,6 +697,9 @@ function Done({ run, keyValue, busy, onBack, onRun }: {
           )}
         </div>
         <AtsCheck run={run} trackerKey={keyValue} onChecked={onRun} />
+
+        <ResumePreview run={run} trackerKey={keyValue} onChange={onRun} />
+        <AddedLines run={run} trackerKey={keyValue} onChange={onRun} />
 
         <div className="border border-line p-5 text-sm text-body">
           <p>Read it once before sending — you know your work best.</p>

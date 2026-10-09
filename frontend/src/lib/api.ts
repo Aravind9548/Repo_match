@@ -554,11 +554,26 @@ export type TailorRun = {
   onePage: boolean;
   model: "pro" | "flash" | null;
   pages: number | null;
+  /** Lines you wrote yourself, in answer to something the job asks for. */
+  additions: ResumeAddition[];
+  /** Corrections you typed over the final resume. */
+  manualEdits: ManualEdit[];
   /** The read-back check of the built PDF, once it's been run. */
   ats: AtsReport | null;
   atsCheckedAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type ResumeAddition = { section: string; item_title: string; text: string; gap: string };
+export type ManualEdit = { section: string; before: string; after: string; reason: string };
+
+/** Your own sentence, tightened into a bullet — or handed straight back when the model tried to embellish it. */
+export type Phrasing = {
+  bullet: string;
+  new_terms: string[];
+  /** True when the model reached for something you didn't say; `bullet` is then your own sentence. */
+  unsupported: boolean;
 };
 
 /** What a parser gets out of the built PDF, and the ad's requirements counted against it. */
@@ -623,6 +638,29 @@ export const buildTailored = (key: string, id: string, body: { acceptedIds: numb
   request<TailorRun>(`/api/tailor/runs/${id}/build`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
 export const rewindTailor = (key: string, id: string, step: TailorStep) =>
   request<TailorRun>(`/api/tailor/runs/${id}/rewind`, keyed(key, { method: "POST", body: JSON.stringify({ step }) }));
+/** No AI call: the line is yours, stored as you typed it. */
+export const addResumeLine = (
+  key: string,
+  id: string,
+  body: { section: string; itemTitle?: string; text: string; gap?: string },
+) => request<TailorRun>(`/api/tailor/runs/${id}/lines`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
+export const removeResumeLine = (key: string, id: string, index: number) =>
+  request<TailorRun>(`/api/tailor/runs/${id}/lines/${index}`, keyed(key, { method: "DELETE" }));
+/** A correction typed over the final resume. No AI call. */
+export const editResumeLine = (key: string, id: string, body: { section?: string; before: string; after: string }) =>
+  request<TailorRun>(`/api/tailor/runs/${id}/line-edit`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
+/** Paid: one cheap call tightening your sentence. It may add nothing you didn't write. */
+export const phraseResumeLine = (key: string, id: string, sentence: string) =>
+  request<{ phrasing: Phrasing; model: string }>(
+    `/api/tailor/runs/${id}/phrase`,
+    keyed(key, { method: "POST", body: JSON.stringify({ sentence }) }),
+  );
+/** The resume as it would be built. No AI call. */
+export const previewResume = (key: string, id: string, acceptedIds?: number[]) =>
+  request<{ resume: ResumeData }>(
+    `/api/tailor/runs/${id}/preview`,
+    keyed(key, { method: "POST", body: JSON.stringify({ acceptedIds: acceptedIds ?? null }) }),
+  );
 /** Paid when the run has a job description: one call lists what the ad asks for. The parse report is free. */
 export const runAtsCheck = (key: string, id: string, body: { model?: "pro" | "flash" } = {}) =>
   request<TailorRun>(`/api/tailor/runs/${id}/ats`, keyed(key, { method: "POST", body: JSON.stringify(body) }));

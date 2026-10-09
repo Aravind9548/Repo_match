@@ -25,6 +25,7 @@ import com.repomatch.tailor.TailorService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -115,6 +116,58 @@ public class TailorController {
     public TailorService.RunView build(@RequestHeader(JobsController.KEY_HEADER) String key, @PathVariable UUID id,
                                        @RequestBody BuildBody body) {
         return tailor.build(keys.resolve(key), id, body.acceptedIds(), body.keepOrder());
+    }
+
+    public record AddLineBody(@Size(max = 80) String section, @Size(max = 200) String itemTitle,
+                              @NotBlank @Size(max = 400) String text, @Size(max = 80) String gap) {
+    }
+
+    /** No AI call: the line is the person's own words, stored as typed. */
+    @PostMapping("/runs/{id}/lines")
+    public TailorService.RunView addLine(@RequestHeader(JobsController.KEY_HEADER) String key, @PathVariable UUID id,
+                                         @Valid @RequestBody AddLineBody body) {
+        return tailor.addLine(keys.resolve(key), id, new TailorService.AdditionInput(body.section(), body.itemTitle(),
+                body.text(), body.gap()));
+    }
+
+    @DeleteMapping("/runs/{id}/lines/{index}")
+    public TailorService.RunView removeLine(@RequestHeader(JobsController.KEY_HEADER) String key,
+                                            @PathVariable UUID id, @PathVariable int index) {
+        return tailor.removeLine(keys.resolve(key), id, index);
+    }
+
+    public record EditLineBody(@Size(max = 80) String section, @NotBlank @Size(max = 1000) String before,
+                               @Size(max = 1000) String after) {
+    }
+
+    /** A correction typed over the final resume. No AI call. */
+    @PostMapping("/runs/{id}/line-edit")
+    public TailorService.RunView editLine(@RequestHeader(JobsController.KEY_HEADER) String key, @PathVariable UUID id,
+                                          @Valid @RequestBody EditLineBody body) {
+        return tailor.editLine(keys.resolve(key), id, new TailorService.ManualEditInput(body.section(), body.before(),
+                body.after()));
+    }
+
+    public record PhraseBody(@NotBlank @Size(max = 1500) String sentence) {
+    }
+
+    /** Paid: one cheap call tightening the person's own sentence. It may add nothing they didn't write. */
+    @PostMapping("/runs/{id}/phrase")
+    public JsonNode phrase(@RequestHeader(JobsController.KEY_HEADER) String key,
+                                                          @PathVariable UUID id, @Valid @RequestBody PhraseBody body,
+                                                          HttpServletRequest http) {
+        return tailor.phrase(keys.resolve(key), id, body.sentence(), http.getRemoteAddr());
+    }
+
+    public record PreviewBody(List<Integer> acceptedIds) {
+    }
+
+    /** The resume as it would be built, so it can be read and corrected before compiling. No AI call. */
+    @PostMapping("/runs/{id}/preview")
+    public JsonNode preview(@RequestHeader(JobsController.KEY_HEADER) String key,
+                                                           @PathVariable UUID id,
+                                                           @RequestBody(required = false) PreviewBody body) {
+        return tailor.preview(keys.resolve(key), id, body == null ? null : body.acceptedIds());
     }
 
     public record AtsBody(@jakarta.validation.constraints.Size(max = 10) String model) {

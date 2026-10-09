@@ -127,8 +127,9 @@ public class TailorService {
                           String company, String jobTitle, String jobDescription, JsonNode resumeData, JsonNode plan,
                           List<Integer> acceptedIds, boolean compiled, boolean hasPdf, String compileLog,
                           boolean usedOwnTemplate, List<Integer> missedEdits, String githubUsername,
-                          String instructions, boolean onePage, String model, Integer pages, JsonNode ats,
-                          Instant atsCheckedAt, Instant createdAt, Instant updatedAt) {
+                          String instructions, boolean onePage, String model, Integer pages, JsonNode additions,
+                          JsonNode manualEdits, JsonNode ats, Instant atsCheckedAt, Instant createdAt,
+                          Instant updatedAt) {
     }
 
     /** What the person asks for at the check step, alongside the (possibly corrected) resume and job description. */
@@ -270,10 +271,14 @@ public class TailorService {
             }
         });
 
+        // The person's own corrections go last, so a line they typed wins over a line the model proposed.
+        array(run.getManualEdits()).forEach(edits::add);
+
         ResumeDocEntity doc = run.getResumeId() == null ? null : resumes.findById(run.getResumeId()).orElse(null);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("resume", json(run.getStructured()));
         body.put("edits", edits);
+        body.put("additions", array(run.getAdditions()));
         body.put("reorder", keepOrder ? mapper.createArrayNode() : plan.path("reorder"));
         body.put("swaps", swaps);
         body.put("link_additions", links);
@@ -298,6 +303,141 @@ public class TailorService {
                     null, null, "Tailored resume built (" + keep.size() + " edit" + (keep.size() == 1 ? "" : "s") + ")"));
         }
         return save(run);
+    }
+
+    /** A line the person writes themselves to answer something the job asks for and the resume didn't show. */
+    public record AdditionInput(String section, String itemTitle, String text, String gap) {
+    }
+
+    /** A correction typed straight over the final resume. */
+    public record ManualEditInput(String section, String before, String after) {
+    }
+
+    /**
+     * Adds a line in the person's own words. No model call: the text is theirs, stored as they typed it.
+     *
+     * <p>This is the only way a gap the job asks for reaches the resume, and it goes in as a description of
+     * something they did — never as the job ad's word pasted in.
+     */
+    @Transactional
+    public RunView addLine(String owner, UUID id, AdditionInput in) {
+        TailorRunEntity run = owned(owner, id);
+        String text = in.text() == null ? "" : in.text().strip();
+        if (text.length() < 3) {
+            throw new IllegalArgumentException("Write the line first — a few words about what you did.");
+        }
+        ArrayNode additions = array(run.getAdditions());
+        additions.add(mapper.createObjectNode()
+                .put("section", in.section() == null || in.section().isBlank() ? "Projects" : in.section().strip())
+                .put("item_title", in.itemTitle() == null ? "" : in.itemTitle().strip())
+                .put("text", text)
+                .put("gap", in.gap() == null ? "" : in.gap().strip()));
+        run.setAdditions(additions.toString());
+        clearAts(run);
+        return save(run);
+    }
+
+    @Transactional
+    public RunView removeLine(String owner, UUID id, int index) {
+        TailorRunEntity run = owned(owner, id);
+        ArrayNode additions = array(run.getAdditions());
+        if (index < 0 || index >= additions.size()) {
+            throw new IllegalArgumentException("That line is already gone.");
+        }
+        additions.remove(index);
+        run.setAdditions(additions.toString());
+        clearAts(run);
+        return save(run);
+    }
+
+    /**
+     * Records a correction the person typed over the final resume. One per line: typing over the same line again
+     * replaces the previous correction rather than stacking.
+     */
+    @Transactional
+    public RunView editLine(String owner, UUID id, ManualEditInput in) {
+        TailorRunEntity run = owned(owner, id);
+        String before = in.before() == null ? "" : in.before().strip();
+        String after = in.after() == null ? "" : in.after().strip();
+        if (before.isBlank()) {
+            throw new IllegalArgumentException("Nothing to correct — the original line is missing.");
+        }
+        ArrayNode kept = mapper.createArrayNode();
+        array(run.getManualEdits()).forEach(e -> {
+            if (!before.equalsIgnoreCase(e.path("before").asText())) {
+                kept.add(e);
+            }
+        });
+        if (!after.isBlank() && !after.equals(before)) {
+            kept.add(mapper.createObjectNode()
+                    .put("section", in.section() == null ? "" : in.section())
+                    .put("before", before)
+                    .put("after", after)
+                    .put("reason", "You wrote this one."));
+        }
+        run.setManualEdits(kept.toString());
+        clearAts(run);
+        return save(run);
+    }
+
+    /** Tightens the person's own sentence into a bullet. One cheap model call; it may add nothing they didn't say. */
+    public JsonNode phrase(String owner, UUID id, String sentence, String clientKey) {
+        TailorRunEntity run = owned(owner, id);
+        if (sentence == null || sentence.strip().length() < 3) {
+            throw new IllegalArgumentException("Write a sentence first.");
+        }
+        usage.acquireLlmCall(clientKey);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("sentence", sentence.strip());
+        body.put("resume", json(run.getStructured()));
+        body.put("model", "flash");
+        return ai.resume("phrase", body);
+    }
+
+    /**
+     * The resume exactly as it would be built, with the given edits kept plus the person's own lines and
+     * corrections. No model call — the same function the build uses.
+     */
+    public JsonNode preview(String owner, UUID id, List<Integer> acceptedIds) {
+        TailorRunEntity run = owned(owner, id);
+        List<Integer> keep = acceptedIds != null ? acceptedIds
+                : run.getAcceptedIds() == null ? List.of() : readInts(run.getAcceptedIds());
+        JsonNode plan = json(run.getPlan());
+        Set<Integer> kept = new HashSet<>(keep);
+
+        ArrayNode edits = mapper.createArrayNode();
+        if (plan != null) {
+            plan.path("edits").forEach(e -> {
+                if (kept.contains(e.path("id").asInt())) {
+                    edits.add(e);
+                }
+            });
+        }
+        array(run.getManualEdits()).forEach(edits::add);
+
+        ArrayNode swaps = mapper.createArrayNode();
+        ArrayNode links = mapper.createArrayNode();
+        if (plan != null) {
+            plan.path("swaps").forEach(x -> {
+                if (kept.contains(x.path("id").asInt())) {
+                    swaps.add(x);
+                }
+            });
+            plan.path("link_additions").forEach(x -> {
+                if (kept.contains(x.path("id").asInt())) {
+                    links.add(x);
+                }
+            });
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("resume", json(run.getStructured()));
+        body.put("edits", edits);
+        body.put("reorder", plan == null ? mapper.createArrayNode() : plan.path("reorder"));
+        body.put("swaps", swaps);
+        body.put("link_additions", links);
+        body.put("additions", array(run.getAdditions()));
+        return ai.resume("apply", body);
     }
 
     /**
@@ -444,7 +584,8 @@ public class TailorService {
                 r.getCompany(), r.getJobTitle(), r.getJobDescription(), json(r.getStructured()), json(r.getPlan()),
                 accepted, r.isCompiled(), r.getPdf() != null, r.getCompileLog(), r.isUsedOwnTemplate(), missed,
                 r.getGithubUsername(), r.getInstructions(), r.isOnePage(), r.getModel(), r.getPages(),
-                json(r.getAtsReport()), r.getAtsCheckedAt(), r.getCreatedAt(), r.getUpdatedAt());
+                array(r.getAdditions()), array(r.getManualEdits()), json(r.getAtsReport()), r.getAtsCheckedAt(),
+                r.getCreatedAt(), r.getUpdatedAt());
     }
 
     private static ResumeView view(ResumeDocEntity d) {
@@ -461,6 +602,12 @@ public class TailorService {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** A stored JSON array, or an empty one — never null, so callers can just append. */
+    private ArrayNode array(String s) {
+        JsonNode node = json(s);
+        return node != null && node.isArray() ? (ArrayNode) node : mapper.createArrayNode();
     }
 
     private String write(Object o) {

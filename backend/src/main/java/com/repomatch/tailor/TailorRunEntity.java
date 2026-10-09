@@ -44,6 +44,12 @@ public class TailorRunEntity {
     private String model;
     private Integer pages;
     /** The ATS read-back report as JSON: what a parser got out of the PDF, and the ad's requirements checked. */
+    /** Lines the person added themselves, as JSON: [{section, item_title, text, gap}]. */
+    @Column(columnDefinition = "text")
+    private String additions;
+    /** Corrections the person typed over the final resume, as JSON: [{section, before, after}]. */
+    @Column(columnDefinition = "text")
+    private String manualEdits;
     @Column(columnDefinition = "text")
     private String atsReport;
     private Instant atsCheckedAt;
@@ -66,6 +72,10 @@ public class TailorRunEntity {
     public void setStep(Step step) { this.step = step; }
     public String getCompany() { return company; }
     public void setCompany(String company) { this.company = company; }
+    public String getAdditions() { return additions; }
+    public void setAdditions(String additions) { this.additions = additions; }
+    public String getManualEdits() { return manualEdits; }
+    public void setManualEdits(String manualEdits) { this.manualEdits = manualEdits; }
     public String getAtsReport() { return atsReport; }
     public void setAtsReport(String atsReport) { this.atsReport = atsReport; }
     public Instant getAtsCheckedAt() { return atsCheckedAt; }
