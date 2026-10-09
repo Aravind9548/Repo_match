@@ -11,4 +11,6 @@ public interface TailorRunRepository extends JpaRepository<TailorRunEntity, UUID
     Optional<TailorRunEntity> findByIdAndOwnerKeyHash(UUID id, String ownerKeyHash);
 
     List<TailorRunEntity> findByOwnerKeyHashAndApplicationIdOrderByUpdatedAtDesc(String ownerKeyHash, long applicationId);
+
+    List<TailorRunEntity> findByOwnerKeyHash(String ownerKeyHash);
 }

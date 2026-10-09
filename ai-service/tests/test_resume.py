@@ -205,3 +205,23 @@ def test_tailor_endpoint_checks_edits_and_honours_model_choice():
         assert res.status_code == 422
     finally:
         app.dependency_overrides.clear()
+
+
+def test_apply_kit_flags_claims_the_sources_never_make():
+    from app import applykit
+
+    repo = r.RepoEvidence(name="raft-kv", url="https://github.com/asha/raft-kv",
+                          readme="A Raft-replicated key-value store in C++17 with leader election.")
+    plan = applykit.KitPlan(answers=[
+        applykit.KitAnswer(question="Why you?", answer="I built a Raft-replicated store in C++17 with leader election.",
+                           grounded_on="raft-kv"),
+        applykit.KitAnswer(question="Tell us more", answer="I also ran Kubernetes clusters at Infosys for 3 years.",
+                           grounded_on="resume"),
+        applykit.KitAnswer(question="Empty one", answer="   ", grounded_on=""),
+    ])
+    checked = applykit.check_answers(plan, sample(), [repo], "Available from June 2027.")
+
+    assert len(checked) == 2  # the empty answer is dropped
+    assert checked[0].unsupported is False
+    assert checked[1].unsupported is True
+    assert any(t in checked[1].new_terms for t in ("Kubernetes", "Infosys"))

@@ -357,13 +357,23 @@ export type Watch = {
   locations: string[];
   kinds: JobKind[];
   active: boolean;
+  /** When on, a new match is tracked, tailored and its answers drafted before you look. */
+  autoPrepare: boolean;
+  autoResumeId: number | null;
+  autoGithubUsername: string | null;
   createdAt: string;
   lastNotifiedAt: string | null;
   newMatches: number;
 };
 
-export type WatchInput = Omit<Watch, "id" | "active" | "createdAt" | "lastNotifiedAt" | "newMatches"> & {
+export type WatchInput = Omit<
+  Watch,
+  "id" | "active" | "createdAt" | "lastNotifiedAt" | "newMatches" | "autoPrepare" | "autoResumeId" | "autoGithubUsername"
+> & {
   active?: boolean;
+  autoPrepare?: boolean;
+  autoResumeId?: number | null;
+  autoGithubUsername?: string | null;
 };
 
 export type MatchStatus = "NEW" | "APPROVED" | "SKIPPED";
@@ -579,3 +589,73 @@ export const rewindTailor = (key: string, id: string, step: TailorStep) =>
   request<TailorRun>(`/api/tailor/runs/${id}/rewind`, keyed(key, { method: "POST", body: JSON.stringify({ step }) }));
 export const tailorDownloadUrl = (key: string, id: string, format: "pdf" | "tex") =>
   `${baseUrl()}/api/tailor/runs/${id}/download?format=${format}&key=${encodeURIComponent(key)}`;
+
+
+// --- apply kit -------------------------------------------------------------------------------------------------
+
+export type ProfileExtra = { label: string; value: string };
+
+/** Answers you give on every form, kept once. */
+export type ApplicantProfile = {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  githubUrl: string;
+  linkedinUrl: string;
+  portfolioUrl: string;
+  workAuthorization: string;
+  noticePeriod: string;
+  expectedSalary: string;
+  graduation: string;
+  extras: ProfileExtra[];
+  updatedAt?: string | null;
+};
+
+export const EMPTY_PROFILE: ApplicantProfile = {
+  fullName: "",
+  email: "",
+  phone: "",
+  location: "",
+  githubUrl: "",
+  linkedinUrl: "",
+  portfolioUrl: "",
+  workAuthorization: "",
+  noticePeriod: "",
+  expectedSalary: "",
+  graduation: "",
+  extras: [],
+};
+
+export type KitAnswer = {
+  question: string;
+  answer: string;
+  /** The resume line or repository the answer rests on. */
+  groundedOn?: string;
+  grounded_on?: string;
+  new_terms?: string[];
+  /** True when the draft used words found in none of your sources — read it before sending. */
+  unsupported?: boolean;
+};
+
+export type ApplyKit = {
+  applicationId: number;
+  company: string | null;
+  role: string | null;
+  applyUrl: string | null;
+  profile: ApplicantProfile | null;
+  answers: KitAnswer[] | null;
+  model: string | null;
+  tailorRunId: string | null;
+  hasPdf: boolean;
+  createdAt: string | null;
+};
+
+export const getProfile = (key: string) => request<ApplicantProfile | null>("/api/apply/profile", keyed(key));
+export const saveProfile = (key: string, body: ApplicantProfile) =>
+  request<ApplicantProfile>("/api/apply/profile", keyed(key, { method: "PUT", body: JSON.stringify(body) }));
+export const getApplyKit = (key: string, applicationId: number) =>
+  request<ApplyKit>(`/api/apply/kits/${applicationId}`, keyed(key));
+/** Paid: one Gemini call drafting this job's answers. */
+export const buildApplyKit = (key: string, applicationId: number, body: { githubUsername?: string; model?: "pro" | "flash" }) =>
+  request<ApplyKit>(`/api/apply/kits/${applicationId}`, keyed(key, { method: "POST", body: JSON.stringify(body) }));

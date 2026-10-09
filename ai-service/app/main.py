@@ -18,6 +18,7 @@ from app.gemini import build_clients
 from app.ranking import cosine_similarities
 from app.websearch import GeminiWebSearcher, WebSearcher
 from app import resume as resumes
+from app import applykit
 from app.schemas import (
     AnswerRequest,
     AnswerResponse,
@@ -74,6 +75,11 @@ def get_web_searcher() -> WebSearcher:
 def get_resume_ai() -> resumes.ResumeAi:
     s = get_settings()
     return resumes.GeminiResumeAi(_clients().llm, s.llm_model)
+
+
+def get_apply_kit_ai() -> applykit.ApplyKitAi:
+    s = get_settings()
+    return applykit.GeminiApplyKitAi(_clients().llm, s.llm_model)
 
 
 def _upstream_error(e: Exception) -> HTTPException:
@@ -339,3 +345,32 @@ async def resume_build(req: BuildRequest) -> BuildResponse:
         missed_edits=missed,
         used_own_template=own,
     )
+
+
+class ApplyKitRequest(BaseModel):
+    job_title: str = Field(default="", max_length=300)
+    company: str = Field(default="", max_length=300)
+    job_description: str = Field(default="", max_length=40_000)
+    # The person's own details, as plain text ("Available from June 2027. No sponsorship needed.").
+    profile: str = Field(default="", max_length=4_000)
+    resume: resumes.Resume
+    repos: list[resumes.RepoEvidence] = Field(default_factory=list, max_length=8)
+    questions: list[str] = Field(default_factory=list, max_length=12)
+    model: str = Field(default="pro", pattern="^(pro|flash)$")
+
+
+class ApplyKitResponse(BaseModel):
+    answers: list[applykit.CheckedAnswer]
+    model: str
+    usage: TokenUsage | None = None
+
+
+@app.post("/apply/answers", response_model=ApplyKitResponse)
+async def apply_answers(req: ApplyKitRequest, ai: applykit.ApplyKitAi = Depends(get_apply_kit_ai)) -> ApplyKitResponse:
+    """Drafts this job's application answers from the resume, the repos and the person's own details."""
+    try:
+        plan, usage, used = await ai.answers(req.job_title, req.company, req.job_description, req.profile, req.resume,
+                                             req.repos, req.questions, TAILOR_MODELS[req.model])
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
+    return ApplyKitResponse(answers=applykit.check_answers(plan, req.resume, req.repos, req.profile), model=used, usage=usage)

@@ -67,6 +67,11 @@ public class AiServiceClient {
         return post("/resume/" + action, body, com.fasterxml.jackson.databind.JsonNode.class);
     }
 
+    /** Drafts one application's answers from the resume, repos and the person's own details. */
+    public com.fasterxml.jackson.databind.JsonNode applyAnswers(Object body) {
+        return post("/apply/answers", body, com.fasterxml.jackson.databind.JsonNode.class);
+    }
+
     private <T> T post(String path, Object body, Class<T> type) {
         try {
             return http.post().uri(path)

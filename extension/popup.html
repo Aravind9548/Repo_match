@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>RepoMatch Autofill</title>
+    <style>
+      :root {
+        --paper: #fbf9f4;
+        --ink: #241f1a;
+        --body: #4a423a;
+        --muted: #8a8075;
+        --line: #e0d9cc;
+        --accent: #b4542a;
+        --amber: #9a6410;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 360px;
+        margin: 0;
+        padding: 16px;
+        background: var(--paper);
+        color: var(--ink);
+        font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      h1 { margin: 0; font-size: 15px; letter-spacing: 0.01em; }
+      p { margin: 8px 0 0; color: var(--body); }
+      .label {
+        font: 11px/1.4 ui-monospace, "SFMono-Regular", Menlo, monospace;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--muted);
+      }
+      input {
+        width: 100%;
+        margin-top: 6px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font: inherit;
+        outline: none;
+      }
+      input:focus { border-color: var(--accent); }
+      button {
+        width: 100%;
+        margin-top: 12px;
+        padding: 10px;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .card { margin-top: 14px; padding: 12px; border: 1px solid var(--line); background: #fff; }
+      ul { margin: 6px 0 0; padding-left: 18px; color: var(--body); }
+      li { margin-top: 2px; }
+      .muted { color: var(--muted); font-size: 13px; }
+      .warn { color: var(--amber); }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <h1>RepoMatch Autofill</h1>
+    <p class="muted">Fills this form from your apply kit. It never submits — read it, then send it yourself.</p>
+
+    <section id="setup" hidden>
+      <label class="label" for="key">Tracker key</label>
+      <input id="key" type="password" placeholder="Paste it from the Alerts page" autocomplete="off" />
+      <label class="label" for="base" style="display: block; margin-top: 12px">Backend</label>
+      <input id="base" type="url" />
+      <button id="save">Save</button>
+    </section>
+
+    <section id="main" hidden>
+      <div id="match" class="card"></div>
+      <button id="fill" disabled>Fill this form</button>
+      <div id="result"></div>
+      <button id="forget" class="ghost">Change key</button>
+    </section>
+
+    <p id="status" class="muted" style="margin-top: 12px"></p>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -49,12 +49,15 @@ public class JobsController {
     private final OwnerKeys keys;
     private final com.repomatch.jobs.WebJobSearchService web;
     private final com.repomatch.jobs.GoogleDiscoveryService discovery;
+    private final com.repomatch.tailor.AutoPrepareService autoPrepare;
     private final String cronSecret;
     private final AtomicReference<Instant> lastRefresh = new AtomicReference<>(Instant.EPOCH);
 
     public JobsController(JobFeedService feed, JobWatchService watches, TrackerService tracker, OwnerKeys keys,
                           com.repomatch.jobs.WebJobSearchService web,
-                          com.repomatch.jobs.GoogleDiscoveryService discovery, AppProperties props) {
+                          com.repomatch.jobs.GoogleDiscoveryService discovery,
+                          com.repomatch.tailor.AutoPrepareService autoPrepare, AppProperties props) {
+        this.autoPrepare = autoPrepare;
         this.web = web;
         this.discovery = discovery;
         this.feed = feed;
@@ -108,13 +111,15 @@ public class JobsController {
     }
 
     public record RunResult(JobFeedService.RefreshResult feed, com.repomatch.jobs.GoogleDiscoveryService.Run discovery,
-                            JobWatchService.AlertRun alerts, TrackerService.ReminderRun reminders) {
+                            JobWatchService.AlertRun alerts, com.repomatch.tailor.AutoPrepareService.Run prepared,
+                            TrackerService.ReminderRun reminders) {
     }
 
     /** Cloud Scheduler calls this with the shared secret: refresh, alert, remind. */
     @PostMapping("/api/jobs/cron")
     public ResponseEntity<RunResult> cron(@RequestHeader(value = "X-Cron-Secret", required = false) String secret,
-                                          @RequestParam(defaultValue = "false") boolean forceDiscovery) {
+                                          @RequestParam(defaultValue = "false") boolean forceDiscovery,
+                                          jakarta.servlet.http.HttpServletRequest http) {
         if (cronSecret == null || cronSecret.isBlank() || !java.security.MessageDigest.isEqual(
                 cronSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 (secret == null ? "" : secret).getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
@@ -125,7 +130,10 @@ public class JobsController {
         var found = discovery.runIfDue(forceDiscovery);
         List<Long> fresh = new java.util.ArrayList<>(r.newPostingIds());
         fresh.addAll(found.newPostingIds());
-        return ResponseEntity.ok(new RunResult(r, found, watches.alert(fresh), tracker.remind()));
+        JobWatchService.AlertRun alerts = watches.alert(fresh);
+        // Preparing comes after alerting, so a person sees the posting even if preparation fails.
+        var prepared = autoPrepare.prepare(http == null ? "cron" : http.getRemoteAddr());
+        return ResponseEntity.ok(new RunResult(r, found, alerts, prepared, tracker.remind()));
     }
 
     /** The "refresh now" button: at most every ten minutes across all users. */
@@ -137,7 +145,7 @@ public class JobsController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
         JobFeedService.RefreshResult r = feed.refresh();
-        return ResponseEntity.ok(new RunResult(r, null, watches.alert(r.newPostingIds()), null));
+        return ResponseEntity.ok(new RunResult(r, null, watches.alert(r.newPostingIds()), null, null));
     }
 
     // --- tracker key ----------------------------------------------------------------------------------------------
@@ -155,9 +163,11 @@ public class JobsController {
     public record WatchBody(@NotBlank @Size(max = 120) String name, @Email @Size(max = 320) String email,
                             @Size(max = 20) List<@Size(max = 60) String> keywords,
                             @Size(max = 20) List<@Size(max = 60) String> excludeKeywords,
-                            @Size(max = 20) List<@Size(max = 60) String> locations, Set<JobKind> kinds, Boolean active) {
+                            @Size(max = 20) List<@Size(max = 60) String> locations, Set<JobKind> kinds, Boolean active,
+                            Boolean autoPrepare, Long autoResumeId, @Size(max = 40) String autoGithubUsername) {
         JobWatchService.WatchInput input() {
-            return new JobWatchService.WatchInput(name, email, keywords, excludeKeywords, locations, kinds);
+            return new JobWatchService.WatchInput(name, email, keywords, excludeKeywords, locations, kinds,
+                    autoPrepare, autoResumeId, autoGithubUsername);
         }
     }
 

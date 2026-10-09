@@ -39,6 +39,10 @@ public class JobWatchEntity {
     @Column(columnDefinition = "text[]")
     private String[] kinds = new String[0];
     private boolean active = true;
+    /** When on, new matches are tracked, tailored and drafted before the person looks. */
+    private boolean autoPrepare;
+    private Long autoResumeId;
+    private String autoGithubUsername;
     private Instant createdAt;
     private Instant lastNotifiedAt;
 
@@ -104,6 +108,12 @@ public class JobWatchEntity {
     public void setLocations(String[] locations) { this.locations = locations; }
     public String[] getKinds() { return kinds; }
     public void setKinds(Set<JobKind> kinds) { this.kinds = kinds.stream().map(Enum::name).sorted().toArray(String[]::new); }
+    public boolean isAutoPrepare() { return autoPrepare; }
+    public void setAutoPrepare(boolean autoPrepare) { this.autoPrepare = autoPrepare; }
+    public Long getAutoResumeId() { return autoResumeId; }
+    public void setAutoResumeId(Long autoResumeId) { this.autoResumeId = autoResumeId; }
+    public String getAutoGithubUsername() { return autoGithubUsername; }
+    public void setAutoGithubUsername(String autoGithubUsername) { this.autoGithubUsername = autoGithubUsername; }
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     public Instant getCreatedAt() { return createdAt; }

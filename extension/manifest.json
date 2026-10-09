@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "RepoMatch Autofill",
+  "version": "1.0.0",
+  "description": "Fills an application form from your RepoMatch apply kit. It never submits — you read it and press submit yourself.",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "host_permissions": [
+    "https://repomatch-backend-317668915507.us-central1.run.app/*",
+    "http://localhost:8081/*"
+  ],
+  "action": {
+    "default_title": "RepoMatch Autofill",
+    "default_popup": "popup.html"
+  }
+}

@@ -313,14 +313,14 @@ public class TailorService {
         return save(run);
     }
 
-    private record Repos(List<Map<String, Object>> evidence, List<Map<String, Object>> all) {
+    record Repos(List<Map<String, Object>> evidence, List<Map<String, Object>> all) {
     }
 
     /**
      * The person's repositories as evidence: all of them (names and links, so missing project links can be added) and
      * the few most similar to this job with their READMEs. Similarity reuses Match's cached embeddings, so it's cheap.
      */
-    private Repos githubEvidence(String username, String jobDescription) {
+    Repos githubEvidence(String username, String jobDescription) {
         List<RepoEntity> owned;
         try {
             owned = MatchPipeline.eligible(repoSync.sync(username, false).repos(), false);

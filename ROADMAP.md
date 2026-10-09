@@ -14,6 +14,9 @@ Every paid AI step waits for a human click; nothing is ever submitted on the use
 | **Alerts** | Saved searches using the same matcher as the feed; in-app inbox, optional email digests with signed links. |
 | **Tracker** | Approve → choose resume → submit yourself → log what comes back. Deadlines reminded 2 days ahead, quiet applications nudged after 2 weeks. |
 | **Resume tailoring** | Upload PDF/DOCX/.tex/text (or reuse a saved one) → check how it was read and the job description (fetched from the posting's source) → accept or reject each proposed edit (edits must match resume text; wording that adds a tool or copies the job ad is flagged and off by default; gaps listed, never inserted) → LaTeX (your own .tex or a clean template) compiled to PDF with Tectonic. |
+| **Apply kit** | Your standing answers kept once (name, phone, work authorisation, graduation, your own Q&A), plus this job's answers drafted from the tailored resume and your repositories — each one shown with what it rests on, and flagged when it uses words no source supports. Copy buttons, the tailored PDF, and the form's own link in one panel. |
+| **Auto-prepare** | An alert can prepare its matches: each new posting is tracked, the resume tailored to a one-page PDF and the answers drafted, before you look. Capped at five a day, only matches found in the last 24 hours, and one failure never stops the rest. Nothing is submitted. |
+| **Autofill extension** | An unpacked Chrome extension (`extension/`) that fills a Greenhouse/Lever/Ashby/SmartRecruiters/Workday form from the kit, matching each field by its label, heading or placeholder. It never submits, never ticks a consent box, never uploads, and never overwrites what you typed. |
 | **India coverage** | 94 sources: Workday career sites filtered to India, India internship lists on GitHub, 88 company boards, and a daily capped Google discovery that keeps only postings whose page names the company and title. |
 
 ## Now — India coverage (this iteration)
@@ -35,7 +38,6 @@ Goal: most of the internships a student in India would find by searching, withou
 ## Next
 
 - **Fit score per posting** — embed postings once, rank the feed by similarity to the user's own repos.
-- **Apply kit** — per posting: resume PDF, answers to common questions drafted from real repos, the link.
 - **Email on** — user adds a Gmail App Password; alerts and reminders go out.
 - **Deadline extraction** — read "apply by" dates from posting pages where they exist.
 
@@ -49,6 +51,7 @@ Goal: most of the internships a student in India would find by searching, withou
 ## Won't do
 
 - **Auto-submitting applications.** Every portal differs, most forbid bots, and one wrong auto-filled answer can
-  cost a real chance. The product stops at "ready to submit".
+  cost a real chance. The product stops at "ready to submit" — auto-prepare and the autofill extension get the form
+  filled and the PDF built, and the last click stays the person's.
 - Scraping sites that forbid it (LinkedIn, Naukri, Internshala). Their postings reach the feed only through
   Google results the user can open themselves.

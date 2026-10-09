@@ -9,6 +9,7 @@ export const PRODUCT_NAV = [
   { href: "/jobs", label: "Jobs", match: ["/jobs"] },
   { href: "/alerts", label: "Alerts", match: ["/alerts"] },
   { href: "/tracker", label: "Tracker", match: ["/tracker"] },
+  { href: "/apply/profile", label: "My details", match: ["/apply"] },
 ];
 
 /** Top navigation with a sliding underline under the section you're in. */

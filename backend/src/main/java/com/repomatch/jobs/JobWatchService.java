@@ -45,11 +45,13 @@ public class JobWatchService {
     }
 
     public record WatchInput(String name, String email, List<String> keywords, List<String> excludeKeywords,
-                             List<String> locations, Set<JobKind> kinds) {
+                             List<String> locations, Set<JobKind> kinds, Boolean autoPrepare, Long autoResumeId,
+                             String autoGithubUsername) {
     }
 
     public record WatchView(long id, String name, String email, List<String> keywords, List<String> excludeKeywords,
-                            List<String> locations, List<String> kinds, boolean active, Instant createdAt,
+                            List<String> locations, List<String> kinds, boolean active, boolean autoPrepare,
+                            Long autoResumeId, String autoGithubUsername, Instant createdAt,
                             Instant lastNotifiedAt, long newMatches) {
     }
 
@@ -228,6 +230,10 @@ public class JobWatchService {
         w.setExcludeKeywords(clean(in.excludeKeywords()));
         w.setLocations(clean(in.locations()));
         w.setKinds(in.kinds() == null ? Set.of() : in.kinds());
+        w.setAutoPrepare(Boolean.TRUE.equals(in.autoPrepare()));
+        w.setAutoResumeId(in.autoResumeId());
+        w.setAutoGithubUsername(in.autoGithubUsername() == null || in.autoGithubUsername().isBlank()
+                ? null : in.autoGithubUsername().strip());
     }
 
     private static String[] clean(List<String> values) {
@@ -251,7 +257,8 @@ public class JobWatchService {
     private static WatchView view(JobWatchEntity w, long newMatches) {
         return new WatchView(w.getId(), w.getName(), w.getEmail(), Arrays.asList(w.getKeywords()),
                 Arrays.asList(w.getExcludeKeywords()), Arrays.asList(w.getLocations()), Arrays.asList(w.getKinds()),
-                w.isActive(), w.getCreatedAt(), w.getLastNotifiedAt(), newMatches);
+                w.isActive(), w.isAutoPrepare(), w.getAutoResumeId(), w.getAutoGithubUsername(), w.getCreatedAt(),
+                w.getLastNotifiedAt(), newMatches);
     }
 
     public static class WatchNotFoundException extends RuntimeException {

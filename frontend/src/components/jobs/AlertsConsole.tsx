@@ -15,6 +15,8 @@ import {
   type JobMatch,
   type MatchStatus,
   type Watch,
+  listResumes,
+  type ResumeDoc,
 } from "@/lib/api";
 import { useTrackerKey } from "@/lib/trackerKey";
 import { EmptyState, PostingRow, timeAgo } from "@/components/jobs/ui";
@@ -43,6 +45,10 @@ export function AlertsConsole() {
   const [error, setError] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [restoreValue, setRestoreValue] = useState("");
+  const [resumes, setResumes] = useState<ResumeDoc[]>([]);
+  // Which watch's auto-prepare panel is open.
+  const [prepFor, setPrepFor] = useState<number | null>(null);
+  const [prep, setPrep] = useState({ resumeId: 0, github: "" });
 
   // A link from the job feed pre-fills the form with that search.
   useEffect(() => {
@@ -62,9 +68,10 @@ export function AlertsConsole() {
   const load = useCallback(async () => {
     if (!key) return;
     try {
-      const [w, m] = await Promise.all([listWatches(key), listMatches(key)]);
+      const [w, m, r] = await Promise.all([listWatches(key), listMatches(key), listResumes(key).catch(() => [])]);
       setWatches(w);
       setMatches(m);
+      setResumes(r);
       if (w.length === 0) setShowForm(true);
     } catch (err) {
       setError(describeError(err));
@@ -237,6 +244,24 @@ export function AlertsConsole() {
                 </button>
                 <button
                   type="button"
+                  className="label hover:text-ink"
+                  disabled={busy}
+                  onClick={() => {
+                    if (w.autoPrepare) {
+                      run(async () => {
+                        await updateWatch(key!, w.id, { ...w, autoPrepare: false });
+                        await load();
+                      });
+                      return;
+                    }
+                    setPrep({ resumeId: w.autoResumeId ?? resumes[0]?.id ?? 0, github: w.autoGithubUsername ?? "" });
+                    setPrepFor(prepFor === w.id ? null : w.id);
+                  }}
+                >
+                  {w.autoPrepare ? "⚡ Auto-prepare on" : "Prepare automatically"}
+                </button>
+                <button
+                  type="button"
                   className="label hover:text-amber"
                   disabled={busy}
                   onClick={() =>
@@ -250,6 +275,71 @@ export function AlertsConsole() {
                   Delete
                 </button>
               </div>
+
+              {w.autoPrepare && (
+                <p className="mt-3 border-t border-line pt-3 text-xs text-muted">
+                  New matches here are tracked, tailored and drafted for you — up to five a day. Nothing is submitted;
+                  each one waits in the tracker for you to read and send.
+                </p>
+              )}
+
+              {prepFor === w.id && (
+                <div className="animate-rise mt-3 space-y-3 border-t border-line pt-4">
+                  <p className="text-sm text-body">
+                    Pick the resume to tailor from. Each prepared application costs two Gemini calls, so it stops at
+                    five a day.
+                  </p>
+                  {resumes.length === 0 ? (
+                    <p className="text-sm text-muted">
+                      No resume saved yet — upload one on an application&apos;s tailoring step first.
+                    </p>
+                  ) : (
+                    <>
+                      <select
+                        className={inputClass}
+                        value={prep.resumeId}
+                        onChange={(e) => setPrep({ ...prep, resumeId: Number(e.target.value) })}
+                      >
+                        {resumes.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.filename || `Resume ${r.id}`}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        className={inputClass}
+                        value={prep.github}
+                        onChange={(e) => setPrep({ ...prep, github: e.target.value })}
+                        placeholder="GitHub username (so edits can quote your repos)"
+                      />
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          className="btn btn-primary flex-1 !py-2.5"
+                          disabled={busy || !prep.resumeId}
+                          onClick={() =>
+                            run(async () => {
+                              await updateWatch(key!, w.id, {
+                                ...w,
+                                autoPrepare: true,
+                                autoResumeId: prep.resumeId,
+                                autoGithubUsername: prep.github.trim() || null,
+                              });
+                              setPrepFor(null);
+                              await load();
+                            })
+                          }
+                        >
+                          Turn it on
+                        </button>
+                        <button type="button" className="btn btn-ghost !py-2.5" onClick={() => setPrepFor(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>

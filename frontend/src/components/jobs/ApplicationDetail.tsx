@@ -17,6 +17,7 @@ import {
 } from "@/lib/api";
 import { useTrackerKey } from "@/lib/trackerKey";
 import { STATUS_META, StatusBadge, timeAgo } from "@/components/jobs/ui";
+import { ApplyKitPanel } from "@/components/apply/ApplyKitPanel";
 
 const PIPELINE: ApplicationStatus[] = ["APPROVED", "APPLIED", "ASSESSMENT", "INTERVIEW", "OFFER"];
 const OUTCOMES: ApplicationStatus[] = ["REJECTED", "GHOSTED", "WITHDRAWN"];
@@ -260,6 +261,8 @@ export function ApplicationDetail({ id }: { id: number }) {
             </ul>
           )}
         </div>
+
+        {key && <ApplyKitPanel id={id} applyUrl={app.applyUrl} trackerKey={key} />}
 
         <div className="border border-line bg-card p-5">
           <label className="block">
