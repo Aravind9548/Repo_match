@@ -117,6 +117,15 @@ export function ApplyKitPanel({ id, applyUrl, trackerKey }: { id: number; applyU
         )}
       </div>
 
+      {kit?.tailorRunId && (
+        <p className="mt-3 text-xs text-muted">
+          <Link href={`/tailor/${kit.tailorRunId}`} className="text-accent-2 hover:text-ink">
+            Read the PDF back like a parser
+          </Link>{" "}
+          before you send it — whether the text comes out, and which of the ad&apos;s requirements it shows.
+        </p>
+      )}
+
       {profileRows.length > 0 ? (
         <dl className="mt-5 divide-y divide-line border-t border-line">
           {profileRows.map((r) => (

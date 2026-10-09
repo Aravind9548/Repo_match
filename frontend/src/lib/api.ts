@@ -554,8 +554,44 @@ export type TailorRun = {
   onePage: boolean;
   model: "pro" | "flash" | null;
   pages: number | null;
+  /** The read-back check of the built PDF, once it's been run. */
+  ats: AtsReport | null;
+  atsCheckedAt: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+/** What a parser gets out of the built PDF, and the ad's requirements counted against it. */
+export type AtsReport = {
+  parse: {
+    pages: number;
+    characters: number;
+    has_text_layer: boolean;
+    email: string;
+    phone: string;
+    links: number;
+    sections_found: string[];
+    sections_missing: string[];
+    problems: string[];
+    first_lines: string[];
+  };
+  coverage: {
+    required_total: number;
+    required_found: number;
+    preferred_total: number;
+    preferred_found: number;
+    /** Share of the ad's required terms present in the extracted text. Not an employer's score. */
+    required_percent: number;
+    requirements: {
+      term: string;
+      importance: "required" | "preferred";
+      quote: string;
+      found: boolean;
+      where: string;
+    }[];
+  } | null;
+  extracted: string;
+  model: string;
 };
 
 export type SuggestOptions = {
@@ -587,6 +623,9 @@ export const buildTailored = (key: string, id: string, body: { acceptedIds: numb
   request<TailorRun>(`/api/tailor/runs/${id}/build`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
 export const rewindTailor = (key: string, id: string, step: TailorStep) =>
   request<TailorRun>(`/api/tailor/runs/${id}/rewind`, keyed(key, { method: "POST", body: JSON.stringify({ step }) }));
+/** Paid when the run has a job description: one call lists what the ad asks for. The parse report is free. */
+export const runAtsCheck = (key: string, id: string, body: { model?: "pro" | "flash" } = {}) =>
+  request<TailorRun>(`/api/tailor/runs/${id}/ats`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
 export const tailorDownloadUrl = (key: string, id: string, format: "pdf" | "tex") =>
   `${baseUrl()}/api/tailor/runs/${id}/download?format=${format}&key=${encodeURIComponent(key)}`;
 

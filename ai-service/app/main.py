@@ -19,6 +19,7 @@ from app.ranking import cosine_similarities
 from app.websearch import GeminiWebSearcher, WebSearcher
 from app import resume as resumes
 from app import applykit
+from app import atscheck
 from app.schemas import (
     AnswerRequest,
     AnswerResponse,
@@ -80,6 +81,11 @@ def get_resume_ai() -> resumes.ResumeAi:
 def get_apply_kit_ai() -> applykit.ApplyKitAi:
     s = get_settings()
     return applykit.GeminiApplyKitAi(_clients().llm, s.llm_model)
+
+
+def get_requirement_ai() -> atscheck.RequirementAi:
+    s = get_settings()
+    return atscheck.GeminiRequirementAi(_clients().llm, s.llm_model)
 
 
 def _upstream_error(e: Exception) -> HTTPException:
@@ -374,3 +380,51 @@ async def apply_answers(req: ApplyKitRequest, ai: applykit.ApplyKitAi = Depends(
     except _UPSTREAM_ERRORS as e:
         raise _upstream_error(e) from e
     return ApplyKitResponse(answers=applykit.check_answers(plan, req.resume, req.repos, req.profile), model=used, usage=usage)
+
+
+class AtsCheckRequest(BaseModel):
+    """The built PDF exactly as it will be sent, and the ad it answers."""
+
+    pdf_base64: str = Field(min_length=100)
+    job_title: str = Field(default="", max_length=300)
+    job_description: str = Field(default="", max_length=40_000)
+    model: str = Field(default="flash", pattern="^(pro|flash)$")
+
+
+class AtsCheckResponse(BaseModel):
+    parse: atscheck.ParseReport
+    coverage: atscheck.Coverage | None = None
+    # What was read out of the file, so the person can see a parser's view of their resume.
+    extracted: str = ""
+    model: str = ""
+    usage: TokenUsage | None = None
+
+
+@app.post("/resume/ats", response_model=AtsCheckResponse)
+async def resume_ats(req: AtsCheckRequest,
+                     ai: atscheck.RequirementAi = Depends(get_requirement_ai)) -> AtsCheckResponse:
+    """Reads the built PDF back like a parser, then checks the ad's requirements against what came out.
+
+    The parse report is deterministic and always returned. The coverage needs the job ad, and one model call to list
+    what the ad asks for — the matching itself is plain string work, never a judgement."""
+    try:
+        pdf = base64.b64decode(req.pdf_base64, validate=True)
+    except (binascii.Error, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"pdf_base64 is not valid base64: {e}") from e
+
+    try:
+        parse = atscheck.parse_report(pdf)
+        extracted = atscheck.extracted_text(pdf)
+    except Exception as e:  # a PDF we can't open is a finding, not a server error
+        logging.getLogger(__name__).warning("ats parse failed: %s", e)
+        raise HTTPException(status_code=400, detail=f"That PDF could not be opened: {e}") from e
+
+    if len(req.job_description.strip()) < 40:
+        return AtsCheckResponse(parse=parse, extracted=extracted[:20_000])
+
+    try:
+        plan, usage, used = await ai.requirements(req.job_title, req.job_description, TAILOR_MODELS[req.model])
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
+    return AtsCheckResponse(parse=parse, coverage=atscheck.check_coverage(plan, extracted),
+                            extracted=extracted[:20_000], model=used, usage=usage)

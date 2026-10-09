@@ -127,8 +127,8 @@ public class TailorService {
                           String company, String jobTitle, String jobDescription, JsonNode resumeData, JsonNode plan,
                           List<Integer> acceptedIds, boolean compiled, boolean hasPdf, String compileLog,
                           boolean usedOwnTemplate, List<Integer> missedEdits, String githubUsername,
-                          String instructions, boolean onePage, String model, Integer pages, Instant createdAt,
-                          Instant updatedAt) {
+                          String instructions, boolean onePage, String model, Integer pages, JsonNode ats,
+                          Instant atsCheckedAt, Instant createdAt, Instant updatedAt) {
     }
 
     /** What the person asks for at the check step, alongside the (possibly corrected) resume and job description. */
@@ -291,11 +291,43 @@ public class TailorService {
         String pdf = built.path("pdf_base64").asText("");
         run.setPdf(pdf.isBlank() ? null : Base64.getDecoder().decode(pdf));
         run.setStep(TailorRunEntity.Step.DONE);
+        clearAts(run);
 
         if (run.getApplicationId() != null && run.isCompiled()) {
             tracker.update(owner, run.getApplicationId(), new TrackerService.Update(null, ResumeChoice.TAILORED, null, null,
                     null, null, "Tailored resume built (" + keep.size() + " edit" + (keep.size() == 1 ? "" : "s") + ")"));
         }
+        return save(run);
+    }
+
+    /**
+     * Reads the built PDF back the way an applicant tracking system would, and checks the job's requirements against
+     * what came out of the file — not against the resume's source, which is not what gets sent.
+     *
+     * <p>The parse half is deterministic. The coverage half costs one model call, to list what the ad asks for; the
+     * matching is plain string work. It is a readability check and a coverage count, not a prediction of any
+     * employer's own score.
+     */
+    @Transactional
+    public RunView atsCheck(String owner, UUID id, String model, String clientKey) {
+        TailorRunEntity run = owned(owner, id);
+        if (run.getPdf() == null) {
+            throw new TailorStepException("Build the PDF first — the check reads the file that would be sent.");
+        }
+        String jd = run.getJobDescription() == null ? "" : run.getJobDescription();
+        if (jd.strip().length() >= 40) {
+            usage.acquireLlmCall(clientKey); // the requirements call; the parse half is free
+        }
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("pdf_base64", Base64.getEncoder().encodeToString(run.getPdf()));
+        body.put("job_title", run.getJobTitle() == null ? "" : run.getJobTitle());
+        body.put("job_description", jd);
+        body.put("model", "pro".equals(model) ? "pro" : "flash");
+        JsonNode report = ai.resume("ats", body);
+
+        run.setAtsReport(report.toString());
+        run.setAtsCheckedAt(Instant.now());
         return save(run);
     }
 
@@ -380,6 +412,13 @@ public class TailorService {
         run.setCompiled(false);
         run.setCompileLog(null);
         run.setMissedEdits(null);
+        clearAts(run);
+    }
+
+    /** The report describes one PDF; the moment that PDF changes it stops being true. */
+    private void clearAts(TailorRunEntity run) {
+        run.setAtsReport(null);
+        run.setAtsCheckedAt(null);
     }
 
     private RunView save(TailorRunEntity run) {
@@ -405,7 +444,7 @@ public class TailorService {
                 r.getCompany(), r.getJobTitle(), r.getJobDescription(), json(r.getStructured()), json(r.getPlan()),
                 accepted, r.isCompiled(), r.getPdf() != null, r.getCompileLog(), r.isUsedOwnTemplate(), missed,
                 r.getGithubUsername(), r.getInstructions(), r.isOnePage(), r.getModel(), r.getPages(),
-                r.getCreatedAt(), r.getUpdatedAt());
+                json(r.getAtsReport()), r.getAtsCheckedAt(), r.getCreatedAt(), r.getUpdatedAt());
     }
 
     private static ResumeView view(ResumeDocEntity d) {

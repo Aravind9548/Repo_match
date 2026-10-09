@@ -117,6 +117,16 @@ public class TailorController {
         return tailor.build(keys.resolve(key), id, body.acceptedIds(), body.keepOrder());
     }
 
+    public record AtsBody(@jakarta.validation.constraints.Size(max = 10) String model) {
+    }
+
+    /** Paid when there's a job description: one model call lists what the ad asks for. The parse report is free. */
+    @PostMapping("/runs/{id}/ats")
+    public TailorService.RunView ats(@RequestHeader(JobsController.KEY_HEADER) String key, @PathVariable UUID id,
+                                     @RequestBody(required = false) AtsBody body, HttpServletRequest http) {
+        return tailor.atsCheck(keys.resolve(key), id, body == null ? null : body.model(), http.getRemoteAddr());
+    }
+
     public record RewindBody(@NotNull TailorRunEntity.Step step) {
     }
 

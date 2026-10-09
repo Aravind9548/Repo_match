@@ -3,6 +3,7 @@ package com.repomatch.tailor;
 import java.time.Instant;
 import java.util.UUID;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -42,6 +43,10 @@ public class TailorRunEntity {
     private boolean onePage = true;
     private String model;
     private Integer pages;
+    /** The ATS read-back report as JSON: what a parser got out of the PDF, and the ad's requirements checked. */
+    @Column(columnDefinition = "text")
+    private String atsReport;
+    private Instant atsCheckedAt;
     private Instant createdAt;
     private Instant updatedAt;
     @Version
@@ -61,6 +66,10 @@ public class TailorRunEntity {
     public void setStep(Step step) { this.step = step; }
     public String getCompany() { return company; }
     public void setCompany(String company) { this.company = company; }
+    public String getAtsReport() { return atsReport; }
+    public void setAtsReport(String atsReport) { this.atsReport = atsReport; }
+    public Instant getAtsCheckedAt() { return atsCheckedAt; }
+    public void setAtsCheckedAt(Instant atsCheckedAt) { this.atsCheckedAt = atsCheckedAt; }
     public String getJobTitle() { return jobTitle; }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
     public String getJobDescription() { return jobDescription; }

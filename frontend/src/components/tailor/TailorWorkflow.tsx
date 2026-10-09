@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+
+import { AtsCheck } from "@/components/tailor/AtsCheck";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildTailored,
@@ -144,7 +146,15 @@ export function TailorWorkflow({ id }: { id: string }) {
         {run.step === "REVIEW_EDITS" && (
           <ReviewEdits run={run} busy={busy} onBuild={(ids, keepOrder) => act("Building LaTeX and compiling your PDF…", () => buildTailored(key!, run.id, { acceptedIds: ids, keepOrder }))} />
         )}
-        {run.step === "DONE" && key && <Done run={run} keyValue={key} busy={busy} onBack={() => act("Going back…", () => rewindTailor(key, run.id, "REVIEW_EDITS"))} />}
+        {run.step === "DONE" && key && (
+          <Done
+            run={run}
+            keyValue={key}
+            busy={busy}
+            onBack={() => act("Going back…", () => rewindTailor(key, run.id, "REVIEW_EDITS"))}
+            onRun={setRun}
+          />
+        )}
       </div>
     </div>
   );
@@ -579,7 +589,13 @@ function ReviewEdits({
 
 // --- Done -------------------------------------------------------------------------------------------------------
 
-function Done({ run, keyValue, busy, onBack }: { run: TailorRun; keyValue: string; busy: string | null; onBack: () => void }) {
+function Done({ run, keyValue, busy, onBack, onRun }: {
+  run: TailorRun;
+  keyValue: string;
+  busy: string | null;
+  onBack: () => void;
+  onRun: (next: TailorRun) => void;
+}) {
   const pdfUrl = useMemo(() => tailorDownloadUrl(keyValue, run.id, "pdf"), [keyValue, run.id]);
   const texUrl = useMemo(() => tailorDownloadUrl(keyValue, run.id, "tex"), [keyValue, run.id]);
   const missed = run.missedEdits.length;
@@ -630,6 +646,8 @@ function Done({ run, keyValue, busy, onBack }: { run: TailorRun; keyValue: strin
             </p>
           )}
         </div>
+        <AtsCheck run={run} trackerKey={keyValue} onChecked={onRun} />
+
         <div className="border border-line p-5 text-sm text-body">
           <p>Read it once before sending — you know your work best.</p>
           <div className="mt-4 flex flex-col gap-2">
