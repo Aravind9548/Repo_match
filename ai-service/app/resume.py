@@ -490,6 +490,7 @@ PHRASE_INSTRUCTION = """You rewrite one sentence a person wrote about their own 
 You are not a ghostwriter and not a salesperson. The facts are theirs and the facts are fixed:
 
 - Use ONLY what their sentence says. Never add a tool, a number, a company, a scale, a result or a quality they did not write. If their sentence is vague, the bullet stays vague.
+- Keep every specific they give: project names, counts, tools, timeframes. Dropping a detail they wrote is as wrong as adding one they didn't.
 - Start with a plain past-tense verb (Built, Led, Wrote, Fixed, Ran, Taught). No "spearheaded", no "leveraged".
 - One sentence, at most 28 words, no full stop at the end if their own lines have none.
 - Never mention the job, the company applying to, or the quality being demonstrated. A bullet that says "showing strong collaboration" is worthless; the work itself shows it.
