@@ -159,6 +159,9 @@ public class WebJobSearchService {
                     return "mismatch"; // redirected to a search page: the posting is gone
                 }
                 String html = new String(body.readNBytes(MAX_PAGE_BYTES), java.nio.charset.StandardCharsets.UTF_8);
+                if (PostingCheck.looksClosed(html)) {
+                    return "gone"; // 200 OK, but the page says it stopped taking applications
+                }
                 return PostingCheck.pageMatches(html, title, company) ? "open" : "mismatch";
             }
         } catch (Exception e) {

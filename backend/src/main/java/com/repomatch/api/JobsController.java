@@ -50,14 +50,17 @@ public class JobsController {
     private final com.repomatch.jobs.WebJobSearchService web;
     private final com.repomatch.jobs.GoogleDiscoveryService discovery;
     private final com.repomatch.tailor.AutoPrepareService autoPrepare;
+    private final com.repomatch.jobs.LinkRecheckService recheck;
     private final String cronSecret;
     private final AtomicReference<Instant> lastRefresh = new AtomicReference<>(Instant.EPOCH);
 
     public JobsController(JobFeedService feed, JobWatchService watches, TrackerService tracker, OwnerKeys keys,
                           com.repomatch.jobs.WebJobSearchService web,
                           com.repomatch.jobs.GoogleDiscoveryService discovery,
-                          com.repomatch.tailor.AutoPrepareService autoPrepare, AppProperties props) {
+                          com.repomatch.tailor.AutoPrepareService autoPrepare,
+                          com.repomatch.jobs.LinkRecheckService recheck, AppProperties props) {
         this.autoPrepare = autoPrepare;
+        this.recheck = recheck;
         this.web = web;
         this.discovery = discovery;
         this.feed = feed;
@@ -112,7 +115,7 @@ public class JobsController {
 
     public record RunResult(JobFeedService.RefreshResult feed, com.repomatch.jobs.GoogleDiscoveryService.Run discovery,
                             JobWatchService.AlertRun alerts, com.repomatch.tailor.AutoPrepareService.Run prepared,
-                            TrackerService.ReminderRun reminders) {
+                            com.repomatch.jobs.LinkRecheckService.Run rechecked, TrackerService.ReminderRun reminders) {
     }
 
     /** Cloud Scheduler calls this with the shared secret: refresh, alert, remind. */
@@ -130,10 +133,12 @@ public class JobsController {
         var found = discovery.runIfDue(forceDiscovery);
         List<Long> fresh = new java.util.ArrayList<>(r.newPostingIds());
         fresh.addAll(found.newPostingIds());
+        // Dead links are closed before anyone is told about anything.
+        com.repomatch.jobs.LinkRecheckService.Run rechecked = recheck.recheck();
         JobWatchService.AlertRun alerts = watches.alert(fresh);
         // Preparing comes after alerting, so a person sees the posting even if preparation fails.
         var prepared = autoPrepare.prepare(http == null ? "cron" : http.getRemoteAddr());
-        return ResponseEntity.ok(new RunResult(r, found, alerts, prepared, tracker.remind()));
+        return ResponseEntity.ok(new RunResult(r, found, alerts, prepared, rechecked, tracker.remind()));
     }
 
     /** The "refresh now" button: at most every ten minutes across all users. */
@@ -145,7 +150,7 @@ public class JobsController {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
         JobFeedService.RefreshResult r = feed.refresh();
-        return ResponseEntity.ok(new RunResult(r, null, watches.alert(r.newPostingIds()), null, null));
+        return ResponseEntity.ok(new RunResult(r, null, watches.alert(r.newPostingIds()), null, null, null));
     }
 
     // --- tracker key ----------------------------------------------------------------------------------------------

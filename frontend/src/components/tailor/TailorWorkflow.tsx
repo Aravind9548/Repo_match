@@ -11,10 +11,12 @@ import {
   buildTailored,
   describeError,
   getApplication,
+  getProfile,
   getTailorRun,
   rewindTailor,
   suggestEdits,
   tailorDownloadUrl,
+  type ApplicantProfile,
   type Application,
   type ResumeData,
   type SuggestOptions,
@@ -22,6 +24,7 @@ import {
   type TailorStep,
 } from "@/lib/api";
 import { useTrackerKey } from "@/lib/trackerKey";
+import { eligibilityNotes } from "@/lib/eligibility";
 
 /** Resume strings carry **bold** and [label](url) markers; show them as text, not symbols. */
 function plain(s: string) {
@@ -137,10 +140,11 @@ export function TailorWorkflow({ id }: { id: string }) {
       )}
 
       <div key={run.step} className="animate-rise">
-        {run.step === "REVIEW_RESUME" && (
+        {run.step === "REVIEW_RESUME" && key && (
           <ReviewResume
             run={run}
             busy={busy}
+            keyValue={key}
             onSuggest={(opts) =>
               act(opts.githubUsername ? "Reading the job, your resume and your GitHub…" : "Reading the job and your resume…", () =>
                 suggestEdits(key!, run.id, opts),
@@ -183,12 +187,19 @@ export function TailorWorkflow({ id }: { id: string }) {
 function ReviewResume({
   run,
   busy,
+  keyValue,
   onSuggest,
 }: {
   run: TailorRun;
   busy: string | null;
+  keyValue: string;
   onSuggest: (opts: SuggestOptions) => void;
 }) {
+  const [profile, setProfile] = useState<ApplicantProfile | null>(null);
+
+  useEffect(() => {
+    getProfile(keyValue).then(setProfile).catch(() => setProfile(null));
+  }, [keyValue]);
   const [resume, setResume] = useState<ResumeData | null>(run.resumeData);
   const [jd, setJd] = useState(run.jobDescription ?? "");
   const [edited, setEdited] = useState(false);
@@ -196,6 +207,8 @@ function ReviewResume({
   const [instructions, setInstructions] = useState(run.instructions ?? "");
   const [onePage, setOnePage] = useState(run.onePage ?? true);
   const [model, setModel] = useState<"pro" | "flash">(run.model ?? "pro");
+  // Hard requirements the ad states that the person's own details contradict.
+  const notes = useMemo(() => eligibilityNotes(jd, profile), [jd, profile]);
 
   // Remember the GitHub username across runs on this device.
   useEffect(() => {
@@ -310,6 +323,31 @@ function ReviewResume({
       </section>
 
       <section className="flex flex-col">
+        {notes.length > 0 && (
+          <div
+            className={`animate-rise mb-5 border p-4 ${
+              notes.some((n) => n.level === "blocked") ? "border-amber/50 bg-amber-soft" : "border-line bg-card"
+            }`}
+          >
+            <p className="label">Before you spend an evening on this</p>
+            <ul className="mt-2 space-y-3">
+              {notes.map((n, i) => (
+                <li key={i}>
+                  <p className={`text-sm ${n.level === "blocked" ? "text-amber" : "text-body"}`}>
+                    {n.level === "blocked" ? "⚠ " : "· "}
+                    {n.text}
+                  </p>
+                  <p className="mt-1 text-xs italic leading-relaxed text-muted">&ldquo;…{n.quote}…&rdquo;</p>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-xs text-muted">
+              Read from the ad&apos;s own words and your saved details — not a judgement of whether you&apos;d be
+              good at the job. Employers do bend these.
+            </p>
+          </div>
+        )}
+
         <p className="label">Job description</p>
         <p className="mt-2 text-xs text-muted">
           {run.jobDescription ? "Fetched from the posting. Trim anything irrelevant, or paste a better one." : "We couldn't fetch it automatically — paste it from the posting."}

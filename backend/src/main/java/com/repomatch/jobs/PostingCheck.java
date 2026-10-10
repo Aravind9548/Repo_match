@@ -26,7 +26,10 @@ public final class PostingCheck {
             Pattern.compile("glassdoor\\.[a-z.]+/(Job|Jobs)/.*SRCH"),
             Pattern.compile("foundit\\.in/srp|shine\\.com/job-search|timesjobs\\.com/candidate/job-search"),
             Pattern.compile("[?&](q|query|keywords|search|searchText|k)=", Pattern.CASE_INSENSITIVE),
-            Pattern.compile("/(search|jobs-search|job-search|search-jobs)(/|\\?|$)", Pattern.CASE_INSENSITIVE));
+            Pattern.compile("/(search|jobs-search|job-search|search-jobs)(/|\\?|$)", Pattern.CASE_INSENSITIVE),
+            // A company's careers index: every role, not the one being claimed. "/careers/backend-intern" is fine.
+            Pattern.compile("/(careers?|jobs|openings|positions|vacancies|opportunities|join-us|work-with-us|"
+                    + "current-openings|life-at-[a-z0-9-]+)/?$", Pattern.CASE_INSENSITIVE));
 
     /** Words too common in company names to prove anything. */
     private static final Set<String> COMPANY_NOISE = Set.of("inc", "ltd", "llc", "pvt", "private", "limited", "technologies",
@@ -37,7 +40,58 @@ public final class PostingCheck {
     private static final Set<String> TITLE_NOISE = Set.of("intern", "interns", "internship", "the", "and", "for", "with",
             "2025", "2026", "2027", "summer", "winter", "remote", "india", "hybrid", "onsite", "full", "time", "part");
 
+    /**
+     * What a page says when the job is over. These pages answer 200 OK — a Google Form that stopped taking
+     * responses, a board that kept the URL alive after the role was filled — so the status code proves nothing and
+     * the words have to be read.
+     */
+    private static final List<String> CLOSED_MARKERS = List.of(
+            "no longer accepting responses",
+            "no longer accepting applications",
+            "is no longer accepting",
+            "no longer available",
+            "no longer open",
+            "no longer being accepted",
+            "this job is no longer posted",
+            "this position has been filled",
+            "the position has been filled",
+            "this role has been filled",
+            "applications are closed",
+            "applications have closed",
+            "application window has closed",
+            "this posting has expired",
+            "this job posting has expired",
+            "job has expired",
+            "we are not accepting applications",
+            "position is closed",
+            "recruitment for this position is closed");
+
     private PostingCheck() {
+    }
+
+    /**
+     * True when the page itself says the job is over.
+     *
+     * <p>Only the visible wording counts: the phrase has to appear in text a reader would see, not inside a script
+     * or an attribute, so a page carrying one of these strings in its own code isn't mistaken for a dead posting.
+     */
+    public static boolean looksClosed(String html) {
+        if (html == null || html.isBlank()) {
+            return false;
+        }
+        String text = visibleText(html);
+        return CLOSED_MARKERS.stream().anyMatch(text::contains);
+    }
+
+    /** Scripts, styles and tags removed, whitespace collapsed, lower-cased: roughly what a reader sees. */
+    static String visibleText(String html) {
+        String text = html.replaceAll("(?is)<(script|style|noscript)[^>]*>.*?</\\1>", " ")
+                .replaceAll("(?s)<[^>]+>", " ")
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&#39;", "'")
+                .replace("&quot;", "\"");
+        return text.replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     public static boolean isListingUrl(String url) {
