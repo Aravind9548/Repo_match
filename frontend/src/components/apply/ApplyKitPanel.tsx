@@ -7,6 +7,7 @@ import {
   describeError,
   getApplyKit,
   tailorDownloadUrl,
+  updateApplication,
   type ApplicantProfile,
   type ApplyKit,
   type KitAnswer,
@@ -61,6 +62,8 @@ export function ApplyKitPanel({ id, applyUrl, trackerKey }: { id: number; applyU
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [github, setGithub] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [howTo, setHowTo] = useState(false);
 
   useEffect(() => {
     getApplyKit(trackerKey, id)
@@ -72,6 +75,20 @@ export function ApplyKitPanel({ id, applyUrl, trackerKey }: { id: number; applyU
       })
       .catch((err) => setError(describeError(err)));
   }, [trackerKey, id]);
+
+  /** The one thing RepoMatch cannot do for you is press their submit button. This records that you did. */
+  async function markSubmitted() {
+    setBusy(true);
+    setError(null);
+    try {
+      await updateApplication(trackerKey, id, { status: "APPLIED" });
+      setSubmitted(true);
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function draft() {
     setBusy(true);
@@ -116,6 +133,53 @@ export function ApplyKitPanel({ id, applyUrl, trackerKey }: { id: number; applyU
           </a>
         )}
       </div>
+
+      {applyUrl && (
+        <div className="mt-5 border-t border-line pt-5">
+          <p className="label">Sending it</p>
+          <ol className="mt-2 space-y-1.5 text-xs leading-relaxed text-muted">
+            <li>1 · Open the form and attach the tailored PDF.</li>
+            <li>
+              2 · Fill it — by hand from the answers below, or in one click with the{" "}
+              <button type="button" className="text-accent-2 hover:text-ink" onClick={() => setHowTo(!howTo)}>
+                autofill extension
+              </button>
+              .
+            </li>
+            <li>3 · Read every field, then press their submit button yourself.</li>
+          </ol>
+          {howTo && (
+            <div className="animate-rise mt-3 border border-line bg-paper p-3 text-xs leading-relaxed text-body">
+              <p>
+                A page on claude.ai can&apos;t type into a form on the employer&apos;s site — only a browser
+                extension can reach across. RepoMatch ships one, in the <code>extension/</code> folder of your repo:
+              </p>
+              <ol className="mt-2 space-y-1 text-muted">
+                <li>· Open <code>chrome://extensions</code> and switch on Developer mode.</li>
+                <li>· Load unpacked → pick the <code>extension</code> folder.</li>
+                <li>· Click it on the form, paste your tracker key once, then &ldquo;Fill this form&rdquo;.</li>
+              </ol>
+              <p className="mt-2">
+                It fills what it recognises and never submits, never ticks a consent box, and never overwrites
+                something you typed.
+              </p>
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn btn-ghost mt-4 w-full !py-2.5"
+            disabled={busy || submitted}
+            onClick={markSubmitted}
+          >
+            {submitted ? "Marked as applied ✓" : "I've submitted it"}
+          </button>
+          {submitted && (
+            <p className="animate-rise mt-2 text-xs text-moss">
+              Tracked as applied. You&apos;ll be nudged if it goes quiet for two weeks.
+            </p>
+          )}
+        </div>
+      )}
 
       {kit?.tailorRunId && (
         <p className="mt-3 text-xs text-muted">

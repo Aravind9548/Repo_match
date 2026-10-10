@@ -3,16 +3,19 @@
 import Link from "next/link";
 
 import { AtsCheck } from "@/components/tailor/AtsCheck";
+import { ApplyKitPanel } from "@/components/apply/ApplyKitPanel";
 import { AddLine, AddedLines } from "@/components/tailor/AddLine";
 import { ResumePreview } from "@/components/tailor/ResumePreview";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildTailored,
   describeError,
+  getApplication,
   getTailorRun,
   rewindTailor,
   suggestEdits,
   tailorDownloadUrl,
+  type Application,
   type ResumeData,
   type SuggestOptions,
   type TailorRun,
@@ -673,6 +676,13 @@ function Done({ run, keyValue, busy, onBack, onRun, onRebuild }: {
   // Changing a line after the build leaves the PDF behind: say so rather than let a stale file be sent.
   const [stale, setStale] = useState(false);
   const [showPreview, setShowPreview] = useState(0);
+  // The application this resume was tailored for, so the form can be opened from here.
+  const [app, setApp] = useState<Application | null>(null);
+
+  useEffect(() => {
+    if (!run.applicationId) return;
+    getApplication(keyValue, run.applicationId).then(setApp).catch(() => setApp(null));
+  }, [keyValue, run.applicationId]);
   const changed = (next: TailorRun) => {
     onRun(next);
     setStale(true);
@@ -735,6 +745,10 @@ function Done({ run, keyValue, busy, onBack, onRun, onRebuild }: {
               {busy ? "Building…" : "Build the PDF again"}
             </button>
           </div>
+        )}
+
+        {run.applicationId && run.hasPdf && !stale && (
+          <ApplyKitPanel id={run.applicationId} applyUrl={app?.applyUrl ?? null} trackerKey={keyValue} />
         )}
 
         <AtsCheck run={run} trackerKey={keyValue} onChecked={onRun} />
