@@ -165,3 +165,16 @@ def test_clean_term_leaves_a_plain_term_alone():
     assert a.clean_term("Kubernetes") == "Kubernetes"
     assert a.clean_term("3 years of experience with Spring Boot") == "Spring Boot"
     assert a.clean_term("strong proficiency in Python") == "Python"
+
+
+def test_a_ligature_never_makes_a_requirement_look_missing():
+    # The file says "proﬁle" with one glyph; the job asks for "profile". That is the same word.
+    coverage = a.check_coverage(plan(("profile", "required")), "Built the user proﬁle service")
+
+    assert coverage.required_found == 1
+
+
+def test_warnings_name_the_words_they_are_about():
+    report = a.ParseReport()
+    assert a._words_containing("Built the proﬁle page and the ﬂow chart", set(a._LIGATURES)) == ["proﬁle", "ﬂow"]
+    assert report.problems == []  # a fresh report claims nothing

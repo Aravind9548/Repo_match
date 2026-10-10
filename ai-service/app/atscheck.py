@@ -39,8 +39,15 @@ _HEADINGS = {
     "projects": ("projects", "portfolio", "open source"),
 }
 
-# Ligatures and the like: present in the file, absent from most parsers' output.
-_LIGATURES = "ﬁﬂﬀﬃﬄﬅﬆœæ"
+# Ligatures: one glyph in the file where a reader sees two letters. A parser that doesn't expand them reads
+# "proﬁle", which no longer matches a search for "profile".
+_LIGATURES = {"ﬁ": "fi", "ﬂ": "fl", "ﬀ": "ff", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "st", "ﬆ": "st", "œ": "oe", "æ": "ae"}
+
+
+def expand_ligatures(text: str) -> str:
+    for glyph, letters in _LIGATURES.items():
+        text = text.replace(glyph, letters)
+    return text
 
 
 class ParseReport(BaseModel):
@@ -166,12 +173,18 @@ def parse_report(data: bytes) -> ParseReport:
         report.problems.append(
             "The layout looks like two columns. Some parsers read down one column and then the other, which jumbles "
             "dates and bullets together.")
-    if any(c in text for c in _LIGATURES):
-        report.problems.append("The file uses ligature glyphs (ﬁ, ﬂ). A few parsers drop them, turning \"profile\" "
-                               "into \"prole\".")
-    if re.search(r"\b\w{32,}\b", text):
-        report.problems.append("Some words ran together with no space between them, which is how a parser will read "
-                               "them too.")
+    ligatured = _words_containing(text, set(_LIGATURES))
+    if ligatured:
+        report.problems.append(
+            "Written with ligature glyphs, where two letters are one character in the file: "
+            + ", ".join(ligatured)
+            + ". Most parsers expand them, a few read \"proﬁle\" as \"prole\". Rebuilding here writes them as "
+              "plain letters.")
+    runs = [w for w in re.findall(r"\b\w{32,}\b", text)][:3]
+    if runs:
+        report.problems.append(
+            "These came out as one word, with no space inside: " + ", ".join(runs)
+            + ". A parser reads them the same way.")
     if report.sections_missing:
         report.problems.append(
             "No heading a parser recognises for: " + ", ".join(report.sections_missing)
@@ -179,6 +192,17 @@ def parse_report(data: bytes) -> ParseReport:
     if report.pages > 1:
         report.problems.append(f"{report.pages} pages. Nothing breaks, but a one-page resume is read in full more often.")
     return report
+
+
+def _words_containing(text: str, glyphs: set[str], limit: int = 4) -> list[str]:
+    """The actual words a problem shows up in — a warning the person can check for themselves."""
+    out: list[str] = []
+    for word in re.findall(r"\S+", text):
+        if any(g in word for g in glyphs) and word not in out:
+            out.append(word.strip(".,;:()"))
+        if len(out) >= limit:
+            break
+    return out
 
 
 def _two_columns(page) -> bool:
@@ -273,7 +297,7 @@ def _line_around(text: str, index: int) -> str:
 
 def check_coverage(plan: RequirementPlan, extracted: str) -> Coverage:
     """Checks each requirement against the text the parser produced — not against the resume's source."""
-    original = _collapse(extracted)
+    original = _collapse(expand_ligatures(extracted))
     lowered = original.lower()
     squashed = _squash(extracted)
     checked: list[CheckedRequirement] = []

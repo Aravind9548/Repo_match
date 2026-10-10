@@ -731,6 +731,8 @@ def preamble(compact: int = 0) -> str:
     return rf"""\documentclass[{size},a4paper]{{article}}
 \usepackage[margin={margin}]{{geometry}}
 \usepackage{{fontspec}}
+% No fi/fl ligatures: they are one glyph in the file, and a parser that doesn't know them reads "prole".
+\defaultfontfeatures{{Ligatures=NoCommon}}
 \usepackage{{enumitem}}
 \usepackage{{titlesec}}
 \usepackage[hidelinks]{{hyperref}}
