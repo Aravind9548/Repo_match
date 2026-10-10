@@ -30,6 +30,7 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   const [itemTitle, setItemTitle] = useState("");
   const [phrasing, setPhrasing] = useState<Phrasing | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const items = sections.find((s) => s.title === section)?.itemTitles ?? [];
@@ -52,9 +53,13 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
     setBusy("Adding…");
     setError(null);
     try {
-      onDone(await addResumeLine(trackerKey, run.id, { section, itemTitle, text: value, gap }));
+      const next = await addResumeLine(trackerKey, run.id, { section, itemTitle, text: value, gap });
+      setAdded(true);
+      onDone(next); // the list below fills in straight away; the box stays long enough to be read
+      setTimeout(onCancel, 1400);
     } catch (err) {
       setError(describeError(err));
+    } finally {
       setBusy(null);
     }
   }
@@ -130,22 +135,35 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
       )}
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <button type="button" className="btn btn-primary !px-5 !py-2.5" disabled={!!busy || value.trim().length < 3} onClick={add}>
-          {busy === "Adding…" ? "Adding…" : "Add this line"}
+        <button
+          type="button"
+          className={`btn btn-primary !px-5 !py-2.5 ${busy === "Adding…" ? "btn-working" : ""}`}
+          disabled={!!busy || added || value.trim().length < 3}
+          onClick={add}
+        >
+          {added ? "Added ✓" : busy === "Adding…" ? "Adding…" : "Add this line"}
         </button>
         <button
           type="button"
-          className="btn btn-ghost !px-5 !py-2.5"
-          disabled={!!busy || text.trim().length < 3 || !!phrasing}
+          className={`btn btn-ghost !px-5 !py-2.5 ${busy === "Tightening…" ? "btn-working" : ""}`}
+          disabled={!!busy || added || text.trim().length < 3 || !!phrasing}
           onClick={tighten}
         >
           {busy === "Tightening…" ? "Tightening…" : "Tighten the wording"}
         </button>
         <button type="button" className="label self-center hover:text-ink" onClick={onCancel}>
-          Cancel
+          {added ? "Close" : "Cancel"}
         </button>
       </div>
-      <p className="label mt-3">Adding costs nothing · tightening is one cheap AI call</p>
+      {added ? (
+        <p className="animate-rise mt-3 text-sm text-moss">
+          Added to {section}
+          {itemTitle ? ` · ${itemTitle}` : ""}. It&apos;s in &ldquo;Lines you wrote&rdquo; below, and in the resume
+          when you build it.
+        </p>
+      ) : (
+        <p className="label mt-3">Adding costs nothing · tightening is one cheap AI call</p>
+      )}
       {error && (
         <p role="alert" className="mt-3 text-sm text-amber">
           {error}
@@ -166,11 +184,15 @@ export function AddedLines({ run, trackerKey, onChange }: {
     return null;
   }
   return (
-    <div className="border border-moss/40 bg-moss-soft p-4">
-      <p className="label">Lines you wrote</p>
+    <div className="animate-rise border border-moss/40 bg-moss-soft p-4">
+      <p className="label">Lines you wrote · {run.additions.length}</p>
       <ul className="mt-3 space-y-3">
         {run.additions.map((a, i) => (
-          <li key={i} className="flex items-start justify-between gap-3">
+          <li
+            key={i}
+            className="animate-rise flex items-start justify-between gap-3"
+            style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
+          >
             <div className="min-w-0">
               <p className="text-sm text-body">{a.text}</p>
               <p className="label mt-1">

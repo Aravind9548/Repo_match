@@ -596,10 +596,7 @@ function ReviewEdits({
                 trackerKey={keyValue}
                 gap={adding}
                 sections={sections.length ? sections : [{ title: "Projects", itemTitles: [] }]}
-                onDone={(next) => {
-                  setAdding(null);
-                  onRun(next);
-                }}
+                onDone={onRun}
                 onCancel={() => setAdding(null)}
               />
             )}
