@@ -7,10 +7,80 @@ import {
   gapIdeas,
   phraseResumeLine,
   removeResumeLine,
+  type GapDraft,
   type GapIdeas,
   type Phrasing,
+  type ResumeData,
   type TailorRun,
 } from "@/lib/api";
+
+const squash = (s: string) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/**
+ * Where a draft belongs: the entry whose own text it restates.
+ *
+ * A draft about one project filed under another makes the resume say something false about that other project, so
+ * the destination follows the source rather than whatever was last selected.
+ */
+export function homeOf(resume: ResumeData | null, draft: GapDraft): { section: string; itemTitle: string } | null {
+  if (!resume) return null;
+  const quote = squash(draft.grounded_on);
+  for (const section of resume.sections) {
+    for (const item of section.items) {
+      const own = squash([item.title, item.subtitle, ...item.bullets].join(" "));
+      if (quote.length > 12 && own.includes(quote)) {
+        return { section: section.title, itemTitle: item.title };
+      }
+    }
+  }
+  // A repository draft belongs with the entry named after that repository.
+  const repo = squash(draft.repo);
+  if (repo.length > 2) {
+    for (const section of resume.sections) {
+      for (const item of section.items) {
+        const title = squash(item.title);
+        if (title && (title.includes(repo) || repo.includes(title))) {
+          return { section: section.title, itemTitle: item.title };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+const STOP = new Set(["with", "that", "this", "from", "were", "their", "they", "them", "when", "what", "which",
+  "while", "into", "over", "after", "before", "built", "made", "used", "using", "work", "worked", "working",
+  "project", "projects", "team", "also", "some", "other", "about", "than", "then", "there", "where", "would",
+  "could", "should", "have", "been", "each", "more", "most", "wrote", "write"]);
+
+/** Distinctive words a line and an entry share — the basis for guessing where a typed line belongs. */
+function shared(a: string, b: string): string[] {
+  const words = (t: string) =>
+    new Set((t.toLowerCase().match(/[a-z][a-z0-9+#.]{3,}/g) ?? []).filter((w) => !STOP.has(w)));
+  const second = words(b);
+  return [...words(a)].filter((w) => second.has(w));
+}
+
+/**
+ * The entry a typed line most likely belongs to: the one it shares the most distinctive words with.
+ *
+ * Only a guess, and it says so — it pre-selects the entry and names the words it matched on, so a wrong guess is
+ * obvious before the line is added rather than after it is on the resume.
+ */
+export function bestHome(resume: ResumeData | null, text: string):
+  { section: string; itemTitle: string; matched: string[] } | null {
+  if (!resume || text.trim().length < 12) return null;
+  let best: { section: string; itemTitle: string; matched: string[] } | null = null;
+  for (const section of resume.sections) {
+    for (const item of section.items) {
+      const matched = shared(text, [item.title, item.subtitle, ...item.bullets].join(" "));
+      if (matched.length >= 2 && (!best || matched.length > best.matched.length)) {
+        best = { section: section.title, itemTitle: item.title, matched };
+      }
+    }
+  }
+  return best;
+}
 
 /**
  * Answering a gap — in the person's own words, never the job ad's.
@@ -34,10 +104,17 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   const [busy, setBusy] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
   const [ideas, setIdeas] = useState<GapIdeas | null>(null);
+  // Where the draft in the box came from, so filing it somewhere else can be called out.
+  const [from, setFrom] = useState<{ section: string; itemTitle: string; label: string } | null>(null);
+  // Once the person picks an entry themselves, the guess stops moving it.
+  const [pickedByHand, setPickedByHand] = useState(false);
+  const [guess, setGuess] = useState<{ itemTitle: string; matched: string[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
   const items = sections.find((s) => s.title === section)?.itemTitles ?? [];
+  const goesTo = itemTitle || items[0] || section;
+  const misfiled = from && (from.section !== section || (itemTitle || items[0] || "") !== from.itemTitle);
   const value = phrasing?.bullet ?? text;
 
   async function help() {
@@ -150,6 +227,17 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
                         setText(d.text);
                         setPhrasing(null);
                         setError(null);
+                        // File it where the work it describes already lives.
+                        const home = homeOf(run.resumeData, d);
+                        if (home) {
+                          setSection(home.section);
+                          setItemTitle(home.itemTitle);
+                        }
+                        setFrom(
+                          home
+                            ? { ...home, label: d.source === "github" ? d.repo || "that repository" : home.itemTitle }
+                            : null,
+                        );
                         box.current?.focus();
                       }}
                     >
@@ -183,9 +271,17 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
           className="mt-1.5 min-h-20 w-full resize-y border border-line bg-card px-3 py-2.5 text-sm outline-none transition placeholder:text-muted/70 focus:border-accent"
           value={text}
           onChange={(e) => {
-            setText(e.target.value);
+            const next = e.target.value;
+            setText(next);
             setPhrasing(null);
             setError(null);
+            if (pickedByHand || from) return;
+            const home = bestHome(run.resumeData, next);
+            setGuess(home ? { itemTitle: home.itemTitle, matched: home.matched } : null);
+            if (home) {
+              setSection(home.section);
+              setItemTitle(home.itemTitle);
+            }
           }}
           placeholder="e.g. worked with two classmates on the Raft project, we split the work and reviewed each other's code"
         />
@@ -199,6 +295,8 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
             value={section}
             onChange={(e) => {
               setSection(e.target.value);
+              setPickedByHand(true);
+              setGuess(null);
               setItemTitle("");
             }}
           >
@@ -211,13 +309,17 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
         </label>
         {items.length > 0 && (
           <label className="block">
-            <span className="label">Which entry</span>
+            <span className="label">Which entry *</span>
             <select
               className="mt-1.5 w-full border border-line bg-card px-3 py-2 text-sm outline-none focus:border-accent"
               value={itemTitle}
-              onChange={(e) => setItemTitle(e.target.value)}
+              onChange={(e) => {
+                setItemTitle(e.target.value);
+                setPickedByHand(true);
+                setGuess(null);
+              }}
             >
-              <option value="">the first one</option>
+
               {items.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -240,6 +342,25 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
           )}
         </div>
       )}
+
+      <div className="mt-4 border-t border-line pt-3">
+        <p className="text-xs text-muted">
+          This line will be read as part of <span className="text-ink">{goesTo}</span>.
+          {guess && !misfiled && (
+            <span className="text-muted">
+              {" "}
+              Put there because you both mention {guess.matched.slice(0, 3).join(", ")} — change it above if
+              that&apos;s the wrong one.
+            </span>
+          )}
+        </p>
+        {misfiled && (
+          <p className="animate-rise mt-2 text-xs leading-relaxed text-amber">
+            ⚠ That draft describes {from?.label}. Putting it under {goesTo} would make your resume say it about{" "}
+            {goesTo} instead — change the entry above, or rewrite the line so it&apos;s true of {goesTo}.
+          </p>
+        )}
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
         <button
@@ -279,13 +400,42 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   );
 }
 
-/** The lines the person has added so far, with a way to take one back out. */
+/** The lines the person has added, with a way to move one to the right entry or take it back out. */
 export function AddedLines({ run, trackerKey, onChange }: {
   run: TailorRun;
   trackerKey: string;
   onChange: (next: TailorRun) => void;
 }) {
   const [busy, setBusy] = useState(false);
+
+  // Every place a line could live, as "Section ∙ Entry".
+  const places: { section: string; itemTitle: string }[] = [];
+  for (const section of run.resumeData?.sections ?? []) {
+    if (section.items.length === 0) {
+      places.push({ section: section.title, itemTitle: "" });
+    }
+    for (const item of section.items) {
+      places.push({ section: section.title, itemTitle: item.title });
+    }
+  }
+
+  /** Moving is removing and re-adding: the line is the person's text, only its home changes. */
+  async function move(index: number, place: { section: string; itemTitle: string }) {
+    const line = run.additions[index];
+    setBusy(true);
+    try {
+      await removeResumeLine(trackerKey, run.id, index);
+      onChange(await addResumeLine(trackerKey, run.id, {
+        section: place.section,
+        itemTitle: place.itemTitle,
+        text: line.text,
+        gap: line.gap,
+      }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!run.additions?.length) {
     return null;
   }
@@ -299,13 +449,32 @@ export function AddedLines({ run, trackerKey, onChange }: {
             className="animate-rise flex items-start justify-between gap-3"
             style={{ animationDelay: `${Math.min(i, 6) * 40}ms` }}
           >
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-sm text-body">{a.text}</p>
               <p className="label mt-1">
-                {a.section}
-                {a.item_title ? ` · ${a.item_title}` : ""}
+                reads as part of {a.item_title || a.section}
                 {a.gap ? ` · answers "${a.gap}"` : ""}
               </p>
+              {places.length > 1 && (
+                <label className="mt-2 block">
+                  <span className="label">Wrong place? Move it</span>
+                  <select
+                    className="mt-1 w-full border border-line bg-card px-2 py-1.5 text-xs outline-none focus:border-accent"
+                    value={`${a.section}||${a.item_title}`}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const [section, itemTitle] = e.target.value.split("||");
+                      void move(i, { section, itemTitle });
+                    }}
+                  >
+                    {places.map((pl) => (
+                      <option key={`${pl.section}||${pl.itemTitle}`} value={`${pl.section}||${pl.itemTitle}`}>
+                        {pl.itemTitle ? `${pl.section} · ${pl.itemTitle}` : pl.section}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <button
               type="button"

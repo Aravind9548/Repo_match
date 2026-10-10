@@ -118,3 +118,22 @@ def test_apply_endpoint_returns_the_resume_the_build_would_use():
     bullets = res.json()["resume"]["sections"][0]["items"][0]["bullets"]
     assert bullets[0].endswith("with leader election")
     assert bullets[-1] == "Paired with two classmates"
+
+
+def test_a_line_with_no_entry_named_is_never_attached_to_an_arbitrary_project():
+    out = r.apply_to_resume(sample(), [], [], additions=[
+        r.BulletAddition(section="Projects", text="Mentored two juniors through their first pull request"),
+    ])
+
+    # It belongs to the section, not to whichever project happened to be listed first.
+    assert out.sections[0].items[0].bullets == sample().sections[0].items[0].bullets
+    assert out.sections[0].lines[-1] == "Mentored two juniors through their first pull request"
+
+
+def test_a_line_naming_an_entry_that_no_longer_exists_falls_back_to_the_section():
+    out = r.apply_to_resume(sample(), [], [], additions=[
+        r.BulletAddition(section="Projects", item_title="A project that was swapped out", text="Paired with a friend"),
+    ])
+
+    assert out.sections[0].items[0].bullets == sample().sections[0].items[0].bullets
+    assert out.sections[0].lines[-1] == "Paired with a friend"

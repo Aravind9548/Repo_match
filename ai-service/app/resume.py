@@ -640,9 +640,8 @@ def _add_bullet(r: Resume, add: BulletAddition) -> None:
         if item is not None:
             item.bullets.append(text)
             return
-    if section.items and not add.item_title:
-        section.items[0].bullets.append(text)
-        return
+    # No entry named, or the named one is gone (swapped out, say). The line goes to the section itself: a line about
+    # one project filed under another would make the resume say something false about that other project.
     section.lines.append(text)
 
 
