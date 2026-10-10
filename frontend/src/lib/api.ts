@@ -638,6 +638,31 @@ export const buildTailored = (key: string, id: string, body: { acceptedIds: numb
   request<TailorRun>(`/api/tailor/runs/${id}/build`, keyed(key, { method: "POST", body: JSON.stringify(body) }));
 export const rewindTailor = (key: string, id: string, step: TailorStep) =>
   request<TailorRun>(`/api/tailor/runs/${id}/rewind`, keyed(key, { method: "POST", body: JSON.stringify({ step }) }));
+/** A draft that restates one of your own lines, with the line it restates. */
+export type GapDraft = {
+  text: string;
+  /** The sentence from your resume or repository this rests on, quoted. */
+  grounded_on: string;
+  source: "resume" | "github";
+  repo: string;
+  repo_url: string;
+  new_terms: string[];
+};
+
+export type GapIdeas = {
+  /** Questions to jog your memory. They contain no claims. */
+  questions: string[];
+  drafts: GapDraft[];
+  /** Drafts thrown away for quoting nothing real, or for adding to what they quoted. */
+  dropped: number;
+};
+
+/** Paid: one cheap call. Nothing is added to the resume — you edit a draft and add it yourself. */
+export const gapIdeas = (key: string, id: string, gap: string) =>
+  request<{ ideas: GapIdeas; model: string }>(
+    `/api/tailor/runs/${id}/gap-ideas`,
+    keyed(key, { method: "POST", body: JSON.stringify({ gap }) }),
+  );
 /** No AI call: the line is yours, stored as you typed it. */
 export const addResumeLine = (
   key: string,

@@ -148,6 +148,16 @@ public class TailorController {
                 body.after()));
     }
 
+    public record GapBody(@NotBlank @Size(max = 120) String gap) {
+    }
+
+    /** Paid: one cheap call. Returns questions and drafts grounded in the person's own resume and repositories. */
+    @PostMapping("/runs/{id}/gap-ideas")
+    public JsonNode gapIdeas(@RequestHeader(JobsController.KEY_HEADER) String key, @PathVariable UUID id,
+                             @Valid @RequestBody GapBody body, HttpServletRequest http) {
+        return tailor.gapIdeas(keys.resolve(key), id, body.gap(), http.getRemoteAddr());
+    }
+
     public record PhraseBody(@NotBlank @Size(max = 1500) String sentence) {
     }
 

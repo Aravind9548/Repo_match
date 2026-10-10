@@ -4,8 +4,10 @@ import { useRef, useState } from "react";
 import {
   addResumeLine,
   describeError,
+  gapIdeas,
   phraseResumeLine,
   removeResumeLine,
+  type GapIdeas,
   type Phrasing,
   type TailorRun,
 } from "@/lib/api";
@@ -31,11 +33,25 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   const [phrasing, setPhrasing] = useState<Phrasing | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
+  const [ideas, setIdeas] = useState<GapIdeas | null>(null);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
   const items = sections.find((s) => s.title === section)?.itemTitles ?? [];
   const value = phrasing?.bullet ?? text;
+
+  async function help() {
+    setBusy("Looking…");
+    setError(null);
+    try {
+      const res = await gapIdeas(trackerKey, run.id, gap);
+      setIdeas(res.ideas);
+    } catch (err) {
+      setError(describeError(err));
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function tighten() {
     if (text.trim().length < 3) {
@@ -84,6 +100,80 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
         Don&apos;t write the word — write what you did. One honest line about real work says it; the word on its own
         says nothing, and an interviewer will ask.
       </p>
+
+      {!ideas && !added && (
+        <button
+          type="button"
+          className={`btn btn-ghost mt-4 w-full !py-2.5 ${busy === "Looking…" ? "btn-working" : ""}`}
+          disabled={!!busy}
+          onClick={help}
+        >
+          {busy === "Looking…" ? "Reading your own work…" : "Help me remember"}
+        </button>
+      )}
+
+      {ideas && (
+        <div className="animate-rise mt-4 space-y-4 border border-line bg-card p-4">
+          {ideas.questions.length > 0 && (
+            <div>
+              <p className="label">Questions, not answers</p>
+              <ul className="mt-2 space-y-1.5">
+                {ideas.questions.map((q, i) => (
+                  <li key={i} className="text-sm text-body">
+                    · {q}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {ideas.drafts.length > 0 ? (
+            <div>
+              <p className="label">From work you already listed</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                Each of these only restates something your resume or a repository already says. Use one as a
+                starting point and change it until it&apos;s how you&apos;d put it — and drop it if it isn&apos;t
+                really true.
+              </p>
+              <ul className="mt-3 space-y-3">
+                {ideas.drafts.map((d, i) => (
+                  <li key={i} className="border border-line bg-paper p-3">
+                    <p className="text-sm text-body">{d.text}</p>
+                    <p className="label mt-1.5">
+                      from your {d.source === "github" ? d.repo || "repository" : "resume"}
+                    </p>
+                    <p className="mt-1 text-xs italic leading-relaxed text-muted">&ldquo;{d.grounded_on}&rdquo;</p>
+                    <button
+                      type="button"
+                      className="label mt-2 text-accent-2 hover:text-ink"
+                      onClick={() => {
+                        setText(d.text);
+                        setPhrasing(null);
+                        setError(null);
+                        box.current?.focus();
+                      }}
+                    >
+                      Use this and edit it →
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="text-sm text-body">
+              Nothing in your resume or repositories speaks to this, so there&apos;s nothing honest to draft. The
+              questions above are the better route — or leave this gap alone.
+            </p>
+          )}
+
+          {ideas.dropped > 0 && (
+            <p className="text-xs text-amber">
+              {ideas.dropped} draft{ideas.dropped === 1 ? " was" : "s were"} discarded for claiming something your
+              own work doesn&apos;t say.
+            </p>
+          )}
+        </div>
+      )}
 
       <label className="mt-4 block">
         <span className="label">What you did — your words</span>

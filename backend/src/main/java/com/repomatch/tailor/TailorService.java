@@ -380,6 +380,33 @@ public class TailorService {
         return save(run);
     }
 
+    /**
+     * Help with a gap: questions that jog the memory, and drafts that restate the person's own resume or
+     * repositories. One cheap model call. Nothing is added to the resume here — the person edits a draft and adds
+     * it themselves, or writes their own line.
+     */
+    public JsonNode gapIdeas(String owner, UUID id, String gap, String clientKey) {
+        TailorRunEntity run = owned(owner, id);
+        if (gap == null || gap.isBlank()) {
+            throw new IllegalArgumentException("Which gap?");
+        }
+        String jd = run.getJobDescription() == null ? "" : run.getJobDescription();
+        List<Map<String, Object>> repos = List.of();
+        if (run.getGithubUsername() != null && !run.getGithubUsername().isBlank() && !jd.isBlank()) {
+            repos = githubEvidence(run.getGithubUsername(), jd).evidence();
+        }
+
+        usage.acquireLlmCall(clientKey);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("gap", gap.strip());
+        body.put("job_title", run.getJobTitle() == null ? "" : run.getJobTitle());
+        body.put("job_description", jd);
+        body.put("resume", json(run.getStructured()));
+        body.put("repos", repos);
+        body.put("model", "flash");
+        return ai.resume("gap-ideas", body);
+    }
+
     /** Tightens the person's own sentence into a bullet. One cheap model call; it may add nothing they didn't say. */
     public JsonNode phrase(String owner, UUID id, String sentence, String clientKey) {
         TailorRunEntity run = owned(owner, id);

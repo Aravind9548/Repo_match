@@ -20,6 +20,7 @@ from app.websearch import GeminiWebSearcher, WebSearcher
 from app import resume as resumes
 from app import applykit
 from app import atscheck
+from app import gapideas
 from app.schemas import (
     AnswerRequest,
     AnswerResponse,
@@ -86,6 +87,11 @@ def get_apply_kit_ai() -> applykit.ApplyKitAi:
 def get_requirement_ai() -> atscheck.RequirementAi:
     s = get_settings()
     return atscheck.GeminiRequirementAi(_clients().llm, s.llm_model)
+
+
+def get_gap_ideas_ai() -> gapideas.GapIdeasAi:
+    s = get_settings()
+    return gapideas.GeminiGapIdeasAi(_clients().llm, s.llm_model)
 
 
 def _upstream_error(e: Exception) -> HTTPException:
@@ -479,3 +485,33 @@ async def resume_phrase(req: PhraseRequest, ai: resumes.ResumeAi = Depends(get_r
     except _UPSTREAM_ERRORS as e:
         raise _upstream_error(e) from e
     return PhraseResponse(phrasing=resumes.check_phrasing(req.sentence, phrasing, req.resume), model=used, usage=usage)
+
+
+class GapIdeasRequest(BaseModel):
+    gap: str = Field(min_length=2, max_length=120)
+    job_title: str = Field(default="", max_length=300)
+    job_description: str = Field(default="", max_length=40_000)
+    resume: resumes.Resume
+    repos: list[resumes.RepoEvidence] = Field(default_factory=list, max_length=8)
+    model: str = Field(default="flash", pattern="^(pro|flash)$")
+
+
+class GapIdeasResponse(BaseModel):
+    ideas: gapideas.CheckedIdeas
+    model: str = ""
+    usage: TokenUsage | None = None
+
+
+@app.post("/resume/gap-ideas", response_model=GapIdeasResponse)
+async def resume_gap_ideas(req: GapIdeasRequest,
+                           ai: gapideas.GapIdeasAi = Depends(get_gap_ideas_ai)) -> GapIdeasResponse:
+    """Questions that jog the memory, and drafts that restate the person's own work — nothing invented.
+
+    A draft survives only if it quotes a real sentence from their resume or the repository it names, and says
+    nothing that sentence doesn't."""
+    try:
+        ideas, usage, used = await ai.ideas(req.gap, req.job_title, req.job_description, req.resume, req.repos,
+                                            TAILOR_MODELS[req.model])
+    except _UPSTREAM_ERRORS as e:
+        raise _upstream_error(e) from e
+    return GapIdeasResponse(ideas=gapideas.check_ideas(ideas, req.resume, req.repos), model=used, usage=usage)
