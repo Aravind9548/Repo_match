@@ -131,3 +131,49 @@ def test_endpoint_returns_checked_ideas():
     assert len(body["drafts"]) == 1  # the Terraform one invented both the tool and the number
     assert body["dropped"] == 1
     assert body["questions"] == ["Did anyone else use what you built?"]
+
+
+def test_a_paraphrased_quote_still_finds_the_real_sentence_and_cites_it():
+    # The model rarely copies its source exactly. The pointer is followed; the person's own sentence is shown.
+    ideas = g.GapIdeas(drafts=[g.GapDraft(
+        text="Wrote the tests before building the storage layer",
+        grounded_on="wrote a test suite before the storage layer was written", source="resume")])
+
+    out = g.check_ideas(ideas, sample(), [])
+
+    assert out.dropped == 0
+    assert out.drafts[0].grounded_on == "Wrote the test suite before the storage layer"  # theirs, not the model's
+
+
+def test_a_draft_says_which_entry_it_belongs_under():
+    ideas = g.GapIdeas(drafts=[g.GapDraft(
+        text="Built a Raft-replicated key-value store with a classmate",
+        grounded_on="Built a Raft-replicated key-value store in C++17 with a classmate", source="resume")])
+
+    draft = g.check_ideas(ideas, sample(), []).drafts[0]
+
+    assert draft.section == "Projects"
+    assert draft.item_title == "Raft KV Store"
+
+
+def test_a_repository_draft_is_filed_under_the_entry_that_repository_is_written_up_as():
+    ideas = g.GapIdeas(drafts=[g.GapDraft(
+        text="Rewrote the client API after watching two people fail to use it",
+        grounded_on="rewrote the client API after watching people fail to use the first one",
+        source="github", repo="raft-kv")])
+
+    draft = g.check_ideas(ideas, sample(), [repo()]).drafts[0]
+
+    assert draft.repo == "raft-kv"
+    assert (draft.section, draft.item_title) == ("Projects", "Raft KV Store")
+    assert "rewrote the client api" in draft.grounded_on.lower()
+
+
+def test_a_pointer_to_nothing_of_theirs_is_still_thrown_away():
+    ideas = g.GapIdeas(drafts=[g.GapDraft(
+        text="Led the product roadmap for a payments team",
+        grounded_on="owned the product roadmap and prioritised the payments backlog", source="resume")])
+
+    out = g.check_ideas(ideas, sample(), [])
+
+    assert out.drafts == [] and out.dropped == 1

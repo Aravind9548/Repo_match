@@ -646,6 +646,9 @@ export type GapDraft = {
   source: "resume" | "github";
   repo: string;
   repo_url: string;
+  /** Where it belongs: the entry whose own words it restates. */
+  section: string;
+  item_title: string;
   new_terms: string[];
 };
 

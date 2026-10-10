@@ -109,6 +109,7 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   // Once the person picks an entry themselves, the guess stops moving it.
   const [pickedByHand, setPickedByHand] = useState(false);
   const [guess, setGuess] = useState<{ itemTitle: string; matched: string[] } | null>(null);
+  const [showQuestions, setShowQuestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const box = useRef<HTMLTextAreaElement>(null);
 
@@ -191,33 +192,21 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
 
       {ideas && (
         <div className="animate-rise mt-4 space-y-4 border border-line bg-card p-4">
-          {ideas.questions.length > 0 && (
-            <div>
-              <p className="label">Questions, not answers</p>
-              <ul className="mt-2 space-y-1.5">
-                {ideas.questions.map((q, i) => (
-                  <li key={i} className="text-sm text-body">
-                    · {q}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
           {ideas.drafts.length > 0 ? (
             <div>
-              <p className="label">From work you already listed</p>
+              <p className="label">Suggested lines, from work you already listed</p>
               <p className="mt-1.5 text-xs leading-relaxed text-muted">
-                Each of these only restates something your resume or a repository already says. Use one as a
-                starting point and change it until it&apos;s how you&apos;d put it — and drop it if it isn&apos;t
-                really true.
+                Each only restates something your resume or a repository already says, and names the entry it
+                belongs under. Use one as a starting point and change it until it&apos;s how you&apos;d put it —
+                and drop it if it isn&apos;t really true.
               </p>
               <ul className="mt-3 space-y-3">
                 {ideas.drafts.map((d, i) => (
                   <li key={i} className="border border-line bg-paper p-3">
                     <p className="text-sm text-body">{d.text}</p>
                     <p className="label mt-1.5">
-                      from your {d.source === "github" ? d.repo || "repository" : "resume"}
+                      → goes under {d.item_title || d.section || "this section"}
+                      {d.source === "github" ? ` · from your ${d.repo || "repository"}` : ""}
                     </p>
                     <p className="mt-1 text-xs italic leading-relaxed text-muted">&ldquo;{d.grounded_on}&rdquo;</p>
                     <button
@@ -227,8 +216,11 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
                         setText(d.text);
                         setPhrasing(null);
                         setError(null);
-                        // File it where the work it describes already lives.
-                        const home = homeOf(run.resumeData, d);
+                        // File it where the work it describes already lives: the entry the draft names, or,
+                        // failing that, the entry whose own text it quotes.
+                        const home = d.item_title
+                          ? { section: d.section, itemTitle: d.item_title }
+                          : homeOf(run.resumeData, d);
                         if (home) {
                           setSection(home.section);
                           setItemTitle(home.itemTitle);
@@ -250,8 +242,29 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
           ) : (
             <p className="text-sm text-body">
               Nothing in your resume or repositories speaks to this, so there&apos;s nothing honest to draft. The
-              questions above are the better route — or leave this gap alone.
+              questions below are the better route — or leave this gap alone.
             </p>
+          )}
+
+          {ideas.questions.length > 0 && (
+            <div className="border-t border-line pt-3">
+              <button
+                type="button"
+                className="label hover:text-ink"
+                onClick={() => setShowQuestions(!showQuestions)}
+              >
+                {showQuestions || ideas.drafts.length === 0 ? "▾" : "▸"} Questions to jog your memory
+              </button>
+              {(showQuestions || ideas.drafts.length === 0) && (
+                <ul className="animate-rise mt-2 space-y-1.5">
+                  {ideas.questions.map((q, i) => (
+                    <li key={i} className="text-sm text-body">
+                      · {q}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           )}
 
           {ideas.dropped > 0 && (
