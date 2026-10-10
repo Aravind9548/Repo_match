@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   addResumeLine,
   describeError,
@@ -32,11 +32,17 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   const [busy, setBusy] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
 
   const items = sections.find((s) => s.title === section)?.itemTitles ?? [];
   const value = phrasing?.bullet ?? text;
 
   async function tighten() {
+    if (text.trim().length < 3) {
+      setError("Write something first, then I'll tighten your words — never add to them.");
+      box.current?.focus();
+      return;
+    }
     setBusy("Tightening…");
     setError(null);
     try {
@@ -50,6 +56,11 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
   }
 
   async function add() {
+    if (value.trim().length < 3) {
+      setError("Write the line first — a few words about what you actually did.");
+      box.current?.focus();
+      return;
+    }
     setBusy("Adding…");
     setError(null);
     try {
@@ -74,15 +85,21 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
         says nothing, and an interviewer will ask.
       </p>
 
-      <textarea
-        className="mt-3 min-h-20 w-full resize-y border border-line bg-card px-3 py-2.5 text-sm outline-none transition placeholder:text-muted/70 focus:border-accent"
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          setPhrasing(null);
-        }}
-        placeholder="e.g. worked with two classmates on the Raft project, we split the work and reviewed each other's code"
-      />
+      <label className="mt-4 block">
+        <span className="label">What you did — your words</span>
+        <textarea
+          ref={box}
+          autoFocus
+          className="mt-1.5 min-h-20 w-full resize-y border border-line bg-card px-3 py-2.5 text-sm outline-none transition placeholder:text-muted/70 focus:border-accent"
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value);
+            setPhrasing(null);
+            setError(null);
+          }}
+          placeholder="e.g. worked with two classmates on the Raft project, we split the work and reviewed each other's code"
+        />
+      </label>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="block">
@@ -138,7 +155,7 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
         <button
           type="button"
           className={`btn btn-primary !px-5 !py-2.5 ${busy === "Adding…" ? "btn-working" : ""}`}
-          disabled={!!busy || added || value.trim().length < 3}
+          disabled={!!busy || added}
           onClick={add}
         >
           {added ? "Added ✓" : busy === "Adding…" ? "Adding…" : "Add this line"}
@@ -146,7 +163,7 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
         <button
           type="button"
           className={`btn btn-ghost !px-5 !py-2.5 ${busy === "Tightening…" ? "btn-working" : ""}`}
-          disabled={!!busy || added || text.trim().length < 3 || !!phrasing}
+          disabled={!!busy || added || !!phrasing}
           onClick={tighten}
         >
           {busy === "Tightening…" ? "Tightening…" : "Tighten the wording"}
@@ -158,8 +175,7 @@ export function AddLine({ run, trackerKey, gap, sections, onDone, onCancel }: {
       {added ? (
         <p className="animate-rise mt-3 text-sm text-moss">
           Added to {section}
-          {itemTitle ? ` · ${itemTitle}` : ""}. It&apos;s in &ldquo;Lines you wrote&rdquo; below, and in the resume
-          when you build it.
+          {itemTitle ? ` · ${itemTitle}` : ""} — open below in the final resume, and in the PDF when you build it.
         </p>
       ) : (
         <p className="label mt-3">Adding costs nothing · tightening is one cheap AI call</p>

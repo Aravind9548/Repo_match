@@ -163,6 +163,11 @@ export function TailorWorkflow({ id }: { id: string }) {
             busy={busy}
             onBack={() => act("Going back…", () => rewindTailor(key, run.id, "REVIEW_EDITS"))}
             onRun={setRun}
+            onRebuild={() =>
+              act("Rebuilding your PDF…", () =>
+                buildTailored(key, run.id, { acceptedIds: run.acceptedIds, keepOrder: false }),
+              )
+            }
           />
         )}
       </div>
@@ -410,6 +415,8 @@ function ReviewEdits({
   const [kept, setKept] = useState<Set<number>>(new Set(run.acceptedIds));
   const [useOrder, setUseOrder] = useState(plan.reorder.length > 0);
   const [adding, setAdding] = useState<string | null>(null);
+  // Bumped whenever the person changes the resume, so the preview opens on the change they just made.
+  const [showPreview, setShowPreview] = useState(0);
   // Where an added line can go: the resume's own sections, as it was read.
   const sections = (run.resumeData?.sections ?? []).map((s) => ({
     title: s.title,
@@ -596,16 +603,32 @@ function ReviewEdits({
                 trackerKey={keyValue}
                 gap={adding}
                 sections={sections.length ? sections : [{ title: "Projects", itemTitles: [] }]}
-                onDone={onRun}
+                onDone={(next) => {
+                  onRun(next);
+                  setShowPreview((n) => n + 1);
+                }}
                 onCancel={() => setAdding(null)}
               />
             )}
           </div>
         )}
 
-        <AddedLines run={run} trackerKey={keyValue} onChange={onRun} />
+        <AddedLines
+          run={run}
+          trackerKey={keyValue}
+          onChange={(next) => {
+            onRun(next);
+            setShowPreview((n) => n + 1);
+          }}
+        />
 
-        <ResumePreview run={run} trackerKey={keyValue} acceptedIds={[...kept]} onChange={onRun} />
+        <ResumePreview
+          run={run}
+          trackerKey={keyValue}
+          acceptedIds={[...kept]}
+          onChange={onRun}
+          openKey={showPreview}
+        />
         {plan.reorder.length > 0 && (
           <label className="flex cursor-pointer items-start gap-3 border border-line p-4">
             <input type="checkbox" className="mt-1 accent-[var(--accent)]" checked={useOrder} onChange={() => setUseOrder(!useOrder)} />
@@ -636,16 +659,25 @@ function ReviewEdits({
 
 // --- Done -------------------------------------------------------------------------------------------------------
 
-function Done({ run, keyValue, busy, onBack, onRun }: {
+function Done({ run, keyValue, busy, onBack, onRun, onRebuild }: {
   run: TailorRun;
   keyValue: string;
   busy: string | null;
   onBack: () => void;
   onRun: (next: TailorRun) => void;
+  onRebuild: () => void;
 }) {
   const pdfUrl = useMemo(() => tailorDownloadUrl(keyValue, run.id, "pdf"), [keyValue, run.id]);
   const texUrl = useMemo(() => tailorDownloadUrl(keyValue, run.id, "tex"), [keyValue, run.id]);
   const missed = run.missedEdits.length;
+  // Changing a line after the build leaves the PDF behind: say so rather than let a stale file be sent.
+  const [stale, setStale] = useState(false);
+  const [showPreview, setShowPreview] = useState(0);
+  const changed = (next: TailorRun) => {
+    onRun(next);
+    setStale(true);
+    setShowPreview((n) => n + 1);
+  };
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -693,10 +725,22 @@ function Done({ run, keyValue, busy, onBack, onRun }: {
             </p>
           )}
         </div>
+        {stale && (
+          <div className="animate-rise border border-amber/40 bg-amber-soft p-5">
+            <p className="text-sm text-ink">The PDF above is the older one.</p>
+            <p className="mt-2 text-sm text-body">
+              You changed a line after it was built. Build again so the file matches what you see below.
+            </p>
+            <button type="button" className="btn btn-primary mt-4 w-full !py-2.5" disabled={!!busy} onClick={onRebuild}>
+              {busy ? "Building…" : "Build the PDF again"}
+            </button>
+          </div>
+        )}
+
         <AtsCheck run={run} trackerKey={keyValue} onChecked={onRun} />
 
-        <ResumePreview run={run} trackerKey={keyValue} onChange={onRun} />
-        <AddedLines run={run} trackerKey={keyValue} onChange={onRun} />
+        <ResumePreview run={run} trackerKey={keyValue} onChange={changed} openKey={showPreview} />
+        <AddedLines run={run} trackerKey={keyValue} onChange={changed} />
 
         <div className="border border-line p-5 text-sm text-body">
           <p>Read it once before sending — you know your work best.</p>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { describeError, editResumeLine, previewResume, type ResumeData, type TailorRun } from "@/lib/api";
 
 function plain(s: string) {
@@ -19,11 +19,12 @@ function Rich({ text }: { text: string }) {
 }
 
 /** One line of the resume: reads as text, becomes a textarea when clicked, saves on blur. */
-function Line({ text, section, onSave, edited }: {
+function Line({ text, section, onSave, edited, mine }: {
   text: string;
   section: string;
   onSave: (before: string, after: string, section: string) => Promise<void>;
   edited: boolean;
+  mine?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(text);
@@ -37,12 +38,17 @@ function Line({ text, section, onSave, edited }: {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        title="Click to correct this line"
+        title={mine ? "You wrote this line. Click to change it." : "Click to correct this line"}
         className={`block w-full cursor-text text-left text-sm leading-relaxed transition hover:bg-accent-soft ${
-          edited ? "border-l-2 border-accent pl-2 text-ink" : "text-body"
+          mine
+            ? "border-l-2 border-moss pl-2 text-ink"
+            : edited
+              ? "border-l-2 border-accent pl-2 text-ink"
+              : "text-body"
         }`}
       >
         <Rich text={text} />
+        {mine && <span className="label ml-2 text-moss">you wrote this</span>}
       </button>
     );
   }
@@ -69,14 +75,17 @@ function Line({ text, section, onSave, edited }: {
  * Any line can be corrected here by clicking it. A correction is stored as the person's own, outranks the model's
  * wording for that line, and survives re-running the suggestions.
  */
-export function ResumePreview({ run, trackerKey, acceptedIds, onChange, defaultOpen = false }: {
+export function ResumePreview({ run, trackerKey, acceptedIds, onChange, defaultOpen = false, openKey = 0 }: {
   run: TailorRun;
   trackerKey: string;
   acceptedIds?: number[];
   onChange?: (next: TailorRun) => void;
   defaultOpen?: boolean;
+  /** Bumped by the page when something changed the resume, to open this and scroll it into view. */
+  openKey?: number;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const panel = useRef<HTMLDivElement>(null);
   const [resume, setResume] = useState<ResumeData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -97,7 +106,15 @@ export function ResumePreview({ run, trackerKey, acceptedIds, onChange, defaultO
     if (open) void load();
   }, [open, load, run.updatedAt]);
 
+  // A change the person just made should be visible without hunting for it.
+  useEffect(() => {
+    if (!openKey) return;
+    setOpen(true);
+    panel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [openKey]);
+
   const editedLines = new Set((run.manualEdits ?? []).map((e) => e.after.trim()));
+  const addedLines = new Set((run.additions ?? []).map((a) => a.text.trim()));
 
   async function save(before: string, after: string, section: string) {
     setSaving(true);
@@ -114,9 +131,11 @@ export function ResumePreview({ run, trackerKey, acceptedIds, onChange, defaultO
   }
 
   return (
-    <div className="border border-line bg-card p-5">
+    <div ref={panel} className="border border-line bg-card p-5">
       <button type="button" className="label hover:text-ink" onClick={() => setOpen(!open)}>
-        {open ? "▾" : "▸"} The final resume{run.manualEdits?.length ? ` · ${run.manualEdits.length} of your own corrections` : ""}
+        {open ? "▾" : "▸"} The final resume
+        {run.additions?.length ? ` · ${run.additions.length} line${run.additions.length === 1 ? "" : "s"} you added` : ""}
+        {run.manualEdits?.length ? ` · ${run.manualEdits.length} correction${run.manualEdits.length === 1 ? "" : "s"}` : ""}
       </button>
 
       {open && (
@@ -145,7 +164,13 @@ export function ResumePreview({ run, trackerKey, acceptedIds, onChange, defaultO
                   <p className="label border-b border-line pb-1">{section.title}</p>
                   {section.lines.map((line, i) => (
                     <div key={`l${i}`} className="mt-2">
-                      <Line text={line} section={section.title} onSave={save} edited={editedLines.has(line.trim())} />
+                      <Line
+                        text={line}
+                        section={section.title}
+                        onSave={save}
+                        edited={editedLines.has(line.trim())}
+                        mine={addedLines.has(line.trim())}
+                      />
                     </div>
                   ))}
                   {section.items.map((item, i) => (
@@ -165,7 +190,13 @@ export function ResumePreview({ run, trackerKey, acceptedIds, onChange, defaultO
                           <li key={j} className="flex gap-2">
                             <span className="mt-[7px] size-1 shrink-0 bg-line-strong" />
                             <div className="min-w-0 flex-1">
-                              <Line text={b} section={section.title} onSave={save} edited={editedLines.has(b.trim())} />
+                              <Line
+                                text={b}
+                                section={section.title}
+                                onSave={save}
+                                edited={editedLines.has(b.trim())}
+                                mine={addedLines.has(b.trim())}
+                              />
                             </div>
                           </li>
                         ))}
