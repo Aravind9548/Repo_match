@@ -1,0 +1,84 @@
+# How CodeRabbit reviews this repository. Schema: https://docs.coderabbit.ai/reference/configuration
+language: en-US
+
+tone_instructions: >-
+  Be direct and specific. Point at the line and say what breaks. Skip praise and preamble.
+
+reviews:
+  profile: assertive
+  # Nothing here should block a merge on its own; the author decides.
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  sequence_diagrams: true
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/.venv/**"
+    - "!**/__pycache__/**"
+    - "!frontend/.next/**"
+    - "!backend/target/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/*.pdf"
+
+  path_instructions:
+    # The invariant the whole product rests on. A review that misses a fabrication path has missed the point.
+    - path: "ai-service/app/**/*.py"
+      instructions: >-
+        This service puts words on a person's resume and into job applications, so the hard rule is that nothing
+        reaches them that their own resume, their repositories or their typed details do not support.
+
+        Flag, as a correctness bug and not a nitpick: any path where model output is returned without passing the
+        verification in that module (check_plan, check_answers, check_ideas, check_phrasing, check_coverage); any
+        verification loosened so that a claim with no source can survive; any quote shown to the user that was not
+        matched against the real source text; any place a drop/flag becomes a silent pass.
+
+        Also check: every endpoint validates input sizes, Gemini calls are wrapped so an upstream failure becomes a
+        clear HTTP error rather than a 500, and regexes are anchored well enough not to match half a word.
+
+    - path: "backend/src/main/java/**/*.java"
+      instructions: >-
+        Spring Boot 3.5 on Java 21. Check owner scoping first: every query that reads or writes a person's data must
+        be constrained by their owner key hash, and a missing constraint is a security bug, not a style issue.
+
+        Also check: paid model calls go through UsageGuard; @Transactional spans the whole read-modify-write; one
+        failing item in a batch (a posting, a watch) cannot abort the rest; JSON stored in text columns is parsed
+        defensively; and anything that closes or deletes a user's data has a reason it can state.
+
+    - path: "backend/src/main/resources/db/migration/*.sql"
+      instructions: >-
+        Flyway migrations are append-only and run against live data. Flag any edit to an existing migration file, any
+        column added NOT NULL without a default on a populated table, any destructive statement without a stated
+        reason, and any index that duplicates one already present.
+
+    - path: "frontend/src/**/*.tsx"
+      instructions: >-
+        Next.js App Router with client components. Check that every state a user can be in is rendered: loading,
+        empty, error, and the case where the tracker key is missing. Flag a disabled control that gives no reason for
+        being disabled, an action with no visible result, and any fetch whose failure is swallowed.
+
+        Accessibility counts: interactive elements must be focusable and labelled.
+
+    - path: "extension/**/*.js"
+      instructions: >-
+        This extension fills forms on employers' sites. It must never submit a form, never tick a consent or
+        agreement box, never touch a password or file input, and never overwrite a value the person already typed.
+        Flag anything that could.
+
+    - path: "**/*test*.{py,java,mjs,ts}"
+      instructions: >-
+        Tests here are meant to pin down behaviour that matters, especially what the product refuses to do. Flag a
+        test that asserts nothing, that would pass if the feature were deleted, or that mocks the very thing it
+        claims to verify.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  learnings:
+    scope: auto
