@@ -1,0 +1,78 @@
+# Every pull request runs the three suites that guard this project, so a review never has to ask "does it still pass?".
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to the same branch makes the previous run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (Java 21)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+      - name: Tests
+        working-directory: backend
+        run: mvn -B --no-transfer-progress test
+
+  ai-service:
+    name: AI service (Python 3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        working-directory: ai-service
+        run: pip install -r requirements-dev.txt
+      - name: Tests
+        working-directory: ai-service
+        # The suite covers extraction, grounding and the checks that drop unsupported claims; it never calls Gemini.
+        run: python -m pytest tests -q
+
+  frontend:
+    name: Frontend (types + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+      - name: Types
+        working-directory: frontend
+        run: npx tsc --noEmit
+      - name: Build
+        working-directory: frontend
+        run: npx next build
+
+  extension:
+    name: Autofill extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install jsdom
+        run: npm install --no-save jsdom
+      - name: Form-filling rules
+        # Proves the filler still refuses to submit, to overwrite typed values, or to touch a password or file field.
+        run: node extension/fill.test.mjs
