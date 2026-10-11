@@ -9,6 +9,20 @@ from app.main import app, get_requirement_ai
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 
 
+class NeverCalled:
+    """Stands in for the model on paths that must not need one. Asking it anything fails the test."""
+
+    model = "never-called"
+
+    async def requirements(self, title, description, model=None):
+        raise AssertionError("this path must not cost a model call")
+
+
+def no_model():
+    """Overrides the model dependency, so these tests pass with no credentials anywhere."""
+    app.dependency_overrides[get_requirement_ai] = lambda: NeverCalled()
+
+
 def fixture_pdf() -> bytes:
     with open(os.path.join(FIXTURES, "bold_links_resume.pdf"), "rb") as f:
         return f.read()
@@ -103,8 +117,11 @@ def test_a_substring_is_not_a_match():
 
 
 def test_endpoint_returns_the_parse_report_without_a_job_description():
-    client = TestClient(app)
-    res = client.post("/resume/ats", json={"pdf_base64": base64.b64encode(fixture_pdf()).decode()})
+    no_model()  # with no ad to read, the check must not reach for a model at all
+    try:
+        res = TestClient(app).post("/resume/ats", json={"pdf_base64": base64.b64encode(fixture_pdf()).decode()})
+    finally:
+        app.dependency_overrides.pop(get_requirement_ai, None)
 
     assert res.status_code == 200
     body = res.json()
@@ -143,8 +160,11 @@ def test_endpoint_scores_against_the_ad_with_one_model_call():
 
 
 def test_endpoint_rejects_something_that_is_not_a_pdf():
-    client = TestClient(app)
-    res = client.post("/resume/ats", json={"pdf_base64": base64.b64encode(b"x" * 200).decode()})
+    no_model()
+    try:
+        res = TestClient(app).post("/resume/ats", json={"pdf_base64": base64.b64encode(b"x" * 200).decode()})
+    finally:
+        app.dependency_overrides.pop(get_requirement_ai, None)
 
     assert res.status_code == 400
     assert "could not be opened" in res.json()["detail"]

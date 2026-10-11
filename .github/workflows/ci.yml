@@ -41,6 +41,11 @@ jobs:
       - name: Tests
         working-directory: ai-service
         # The suite covers extraction, grounding and the checks that drop unsupported claims; it never calls Gemini.
+        # These two only let a client object be constructed without Google credentials — nothing authenticates and
+        # no request is sent. A test that needs a model stubs it.
+        env:
+          GOOGLE_GENAI_USE_VERTEXAI: "false"
+          GEMINI_API_KEY: "not-a-real-key-no-call-is-made"
         run: python -m pytest tests -q
 
   frontend:
@@ -56,12 +61,14 @@ jobs:
       - name: Install
         working-directory: frontend
         run: npm ci
-      - name: Types
-        working-directory: frontend
-        run: npx tsc --noEmit
+      # The build has to come first: Next generates the route types (PageProps, LayoutProps) that the app's own
+      # pages are typed against, so tsc on a fresh checkout has nothing to resolve them to.
       - name: Build
         working-directory: frontend
         run: npx next build
+      - name: Types
+        working-directory: frontend
+        run: npx tsc --noEmit
 
   extension:
     name: Autofill extension
