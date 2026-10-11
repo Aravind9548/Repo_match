@@ -126,7 +126,7 @@ export function TrackerBoard() {
       {apps && apps.length === 0 && (
         <EmptyState title="No applications yet">
           Approve a role from the <Link href="/jobs" className="text-accent-2 hover:underline">job feed</Link> or your{" "}
-          <Link href="/alerts" className="text-accent-2 hover:underline">alerts</Link> and it shows up here.
+          <Link href="/jobs?tab=saved" className="text-accent-2 hover:underline">saved search</Link> and it shows up here.
         </EmptyState>
       )}
 

@@ -4,11 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export const PRODUCT_NAV = [
-  { href: "/analyze", label: "Match", match: ["/analyze", "/workflow", "/results", "/history"] },
-  { href: "/ask", label: "Genie", match: ["/ask"] },
-  { href: "/jobs", label: "Jobs", match: ["/jobs"] },
-  { href: "/alerts", label: "Alerts", match: ["/alerts"] },
-  { href: "/tracker", label: "Tracker", match: ["/tracker"] },
+  // Four stops, in the order a person actually moves through them.
+  { href: "/jobs", label: "Find", match: ["/jobs"] },
+  { href: "/tracker", label: "Applications", match: ["/tracker", "/tailor"] },
+  { href: "/repos", label: "My repos", match: ["/repos", "/analyze", "/ask", "/workflow", "/results", "/history"] },
   { href: "/apply/profile", label: "My details", match: ["/apply"] },
 ];
 

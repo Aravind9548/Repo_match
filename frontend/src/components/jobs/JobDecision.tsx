@@ -187,7 +187,7 @@ export function JobDecision({ postingId }: { postingId: number }) {
               <p className="label">Skipped</p>
               <p className="mt-3 text-sm text-body">It won&apos;t show as new in your alerts again.</p>
               <div className="mt-6 flex gap-3">
-                <Link href="/alerts" className="btn btn-primary flex-1">
+                <Link href="/jobs?tab=saved" className="btn btn-primary flex-1">
                   Back to alerts
                 </Link>
                 <button type="button" className="btn btn-ghost" onClick={() => setSkipped(false)}>

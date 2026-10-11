@@ -53,7 +53,7 @@ export function ApplicationDetail({ id }: { id: number }) {
   useEffect(() => {
     if (!ready) return;
     if (!key) {
-      setError("This tracker belongs to another device. Open the link from your email, or paste your key on the Alerts page.");
+      setError("This tracker belongs to another device. Open the link from your email, or paste your key under Find → Saved searches.");
       return;
     }
     getApplication(key, id).then(accept).catch((err) => setError(describeError(err)));

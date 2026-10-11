@@ -89,7 +89,7 @@ export function ProfileForm() {
   if (ready && !key) {
     return (
       <div role="alert" className="border border-accent/40 bg-accent-soft px-5 py-4">
-        Open the link from your email, or paste your key on the Alerts page — your details are stored against it.
+        Open the link from your email, or paste your key under Find → Saved searches — your details are stored against it.
       </div>
     );
   }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { MobileNav, NavLinks } from "@/components/NavLinks";
+import { FlowStrip } from "@/components/FlowStrip";
 import { ScrollProgress } from "@/components/Reveal";
 import "./globals.css";
 
@@ -15,11 +16,10 @@ export const metadata: Metadata = {
 
 const FOOTER_NAV = [
   { href: "/#how-it-works", label: "How it works" },
-  { href: "/analyze", label: "Match" },
-  { href: "/ask", label: "Genie" },
-  { href: "/jobs", label: "Jobs" },
-  { href: "/alerts", label: "Alerts" },
-  { href: "/tracker", label: "Tracker" },
+  { href: "/jobs", label: "Find a role" },
+  { href: "/tracker", label: "Applications" },
+  { href: "/repos", label: "My repos" },
+  { href: "/apply/profile", label: "My details" },
 ];
 
 function Logo({ size = 30 }: { size?: number }) {
@@ -49,16 +49,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <NavLinks />
 
             <div className="flex items-center gap-3">
-              <Link href="/history" className="label hidden hover:text-ink sm:block">
-                History
-              </Link>
-              <Link href="/analyze" className="btn btn-primary !px-5 !py-2.5">
-                Try free
+              <Link href="/jobs" className="btn btn-primary !px-5 !py-2.5">
+                Find a job
               </Link>
             </div>
           </nav>
           <MobileNav />
         </header>
+
+        <FlowStrip />
 
         <main className="flex-1">{children}</main>
 
