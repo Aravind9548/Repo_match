@@ -12,6 +12,11 @@ const jetbrains = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["lati
 export const metadata: Metadata = {
   title: "RepoMatch",
   description: "Paste a job description, get back which of your GitHub projects to put on the resume — ranked, with citations.",
+  other: {
+    // Proves this site is ours to the Strix scanner. DNS verification can't work here: the registrable domain is
+    // vercel.app, which belongs to Vercel, so ownership is proved on the page instead.
+    "strix-verification": "strix-verify-1a35a736e7afac6ac3354521871dd0f8",
+  },
 };
 
 const FOOTER_NAV = [
