@@ -27,11 +27,11 @@ installed). Exit code 1 means something failed.
 | Cron secret | The scheduled run spends Gemini calls. |
 | Unknown origin | A hostile page must not be able to read the API with a visitor's key. |
 
-## Known, deliberate
+## Fixed by this probe
 
-`/api/tailor/applications/{id}/runs` answers **200 with an empty list** for an application you don't own, where the
-others answer 404. No content leaks, but it does confirm the id exists. Left as is because it is a list endpoint and
-an empty list is its honest answer; worth changing if id existence ever becomes sensitive.
+`/api/tailor/applications/{id}/runs` used to answer **200 with an empty list** for an application you don't own,
+where every other endpoint answers 404. No content leaked, but an empty list still confirms the id exists. It now
+checks ownership first and answers 404 like the rest.
 
 ## What this does not cover
 

@@ -188,7 +188,16 @@ public class TailorService {
     }
 
     @Transactional(readOnly = true)
+    /**
+     * The tailoring runs for one application.
+     *
+     * <p>An application that isn't yours is a 404, not an empty list. Both hide the content, but an empty list still
+     * tells whoever asked that the id exists — and every other endpoint here already answers 404, so answering
+     * differently on one of them is a hint worth not giving.
+     */
     public List<RunView> forApplication(String owner, long applicationId) {
+        applications.findByIdAndOwnerKeyHash(applicationId, owner)
+                .orElseThrow(() -> new TailorNotFoundException("Application " + applicationId));
         return runs.findByOwnerKeyHashAndApplicationIdOrderByUpdatedAtDesc(owner, applicationId).stream()
                 .map(r -> view(r, null)).toList();
     }
